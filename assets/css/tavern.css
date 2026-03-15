@@ -1,0 +1,365 @@
+/* =============================================================================
+   TAVERN PAGE — assets/css/tavern.css
+   ============================================================================= */
+
+/* -----------------------------------------------------------------------
+   LAYOUT
+----------------------------------------------------------------------- */
+.tavern-wrap {
+    max-width: 1020px;
+    margin: 0 auto;
+}
+
+.tavern-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-bottom: 1.75rem;
+}
+
+.tavern-header h1 { margin-bottom: 0.25rem; }
+
+.tavern-stats {
+    display: flex;
+    gap: 1rem;
+    flex-shrink: 0;
+}
+
+.tstat {
+    text-align: center;
+    background: var(--color-bg-card);
+    border: 1px solid var(--color-border-gold);
+    border-radius: var(--radius);
+    padding: 0.5rem 1rem;
+    min-width: 64px;
+}
+
+.tstat-val {
+    display: block;
+    font-family: var(--font-heading);
+    font-size: 1.4rem;
+    font-weight: 700;
+    line-height: 1;
+}
+
+.tstat-label {
+    display: block;
+    font-family: var(--font-heading);
+    font-size: 0.62rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--color-text-muted);
+    margin-top: 0.2rem;
+}
+
+.tavern-layout {
+    display: grid;
+    grid-template-columns: 1fr 300px;
+    gap: 1.5rem;
+    align-items: start;
+}
+
+/* -----------------------------------------------------------------------
+   PINNED SECTION
+----------------------------------------------------------------------- */
+.pinned-section {
+    margin-bottom: 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.pin-label {
+    font-family: var(--font-heading);
+    font-size: 0.65rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--color-gold);
+    margin-bottom: 0.35rem;
+}
+
+.pinned-card {
+    border-left: 3px solid var(--color-gold) !important;
+    background: linear-gradient(135deg, rgba(212,160,23,0.05) 0%, var(--color-bg-card) 100%) !important;
+}
+
+/* -----------------------------------------------------------------------
+   MESSAGE FEED
+----------------------------------------------------------------------- */
+.message-feed {
+    display: flex;
+    flex-direction: column;
+    gap: 0.65rem;
+}
+
+.message-card {
+    background: var(--color-bg-card);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+    padding: 1rem 1.25rem;
+    transition: border-color var(--transition);
+}
+
+.message-card:hover { border-color: var(--color-border-gold); }
+
+.own-message {
+    border-color: rgba(212,160,23,0.25);
+    background: rgba(212,160,23,0.03);
+}
+
+/* Message header row */
+.message-header {
+    display: flex;
+    align-items: center;
+    gap: 0.65rem;
+    margin-bottom: 0.6rem;
+}
+
+.msg-avatar {
+    font-size: 1.2rem;
+    flex-shrink: 0;
+}
+
+.msg-meta {
+    flex: 1;
+    display: flex;
+    align-items: baseline;
+    gap: 0.5rem;
+    min-width: 0;
+}
+
+.msg-username {
+    font-family: var(--font-heading);
+    font-size: 0.85rem;
+    letter-spacing: 0.03em;
+    color: var(--color-text);
+    white-space: nowrap;
+}
+
+.msg-username.msg-me { color: var(--color-gold-light); }
+
+.msg-level {
+    font-size: 0.75rem;
+    white-space: nowrap;
+}
+
+.msg-time {
+    font-size: 0.75rem;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+/* Message action buttons */
+.msg-actions {
+    display: flex;
+    gap: 0.25rem;
+    flex-shrink: 0;
+    opacity: 0;
+    transition: opacity var(--transition);
+}
+
+.message-card:hover .msg-actions { opacity: 1; }
+
+.msg-action-form { display: inline; }
+
+.msg-action-btn {
+    background: none;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius);
+    color: var(--color-text-dim);
+    cursor: pointer;
+    font-size: 0.75rem;
+    padding: 0.2rem 0.4rem;
+    line-height: 1;
+    transition: all var(--transition);
+}
+
+.msg-action-btn:hover   { border-color: var(--color-text-muted); color: var(--color-text); }
+.delete-btn:hover       { border-color: var(--color-red); color: var(--color-red); }
+
+/* Message body */
+.message-body {
+    font-family: var(--font-body);
+    font-size: 1rem;
+    color: var(--color-text);
+    line-height: 1.6;
+    word-break: break-word;
+}
+
+/* -----------------------------------------------------------------------
+   EMPTY STATE
+----------------------------------------------------------------------- */
+.tavern-empty {
+    text-align: center;
+    padding: 3rem 1.5rem;
+    color: var(--color-text-muted);
+}
+
+.tavern-empty-icon {
+    font-size: 3rem;
+    margin-bottom: 1rem;
+    display: block;
+}
+
+/* -----------------------------------------------------------------------
+   PAGINATION
+----------------------------------------------------------------------- */
+.pagination {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    margin-top: 1.5rem;
+    flex-wrap: wrap;
+}
+
+.page-btn {
+    font-family: var(--font-heading);
+    font-size: 0.78rem;
+    letter-spacing: 0.06em;
+    color: var(--color-text-muted);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius);
+    padding: 0.4rem 0.85rem;
+    text-decoration: none;
+    transition: all var(--transition);
+}
+
+.page-btn:hover {
+    color: var(--color-gold-light);
+    border-color: var(--color-gold-dark);
+}
+
+.page-numbers {
+    display: flex;
+    gap: 0.3rem;
+    align-items: center;
+}
+
+.page-num {
+    font-family: var(--font-heading);
+    font-size: 0.8rem;
+    color: var(--color-text-muted);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius);
+    padding: 0.35rem 0.6rem;
+    text-decoration: none;
+    min-width: 34px;
+    text-align: center;
+    transition: all var(--transition);
+}
+
+.page-num:hover { color: var(--color-gold-light); border-color: var(--color-gold-dark); }
+
+.page-num.current {
+    color: var(--color-gold-light);
+    background: rgba(212,160,23,0.1);
+    border-color: var(--color-gold-dark);
+}
+
+.page-ellipsis {
+    color: var(--color-text-dim);
+    font-size: 0.8rem;
+    padding: 0 0.2rem;
+}
+
+/* -----------------------------------------------------------------------
+   SIDEBAR
+----------------------------------------------------------------------- */
+.tavern-sidebar {
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+}
+
+/* Post form */
+.post-card { }
+
+textarea {
+    resize: vertical;
+    min-height: 100px;
+}
+
+.char-counter {
+    text-align: right;
+    font-family: var(--font-heading);
+    font-size: 0.72rem;
+    letter-spacing: 0.06em;
+    color: var(--color-text-dim);
+    margin-top: 0.35rem;
+}
+
+/* Rules card */
+.rules-card { }
+
+.rules-list {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.rules-list li {
+    font-size: 0.85rem;
+    color: var(--color-text-muted);
+    padding-left: 1.1rem;
+    position: relative;
+    line-height: 1.4;
+}
+
+.rules-list li::before {
+    content: '·';
+    position: absolute;
+    left: 0;
+    color: var(--color-gold-dark);
+    font-size: 1.2rem;
+    line-height: 1;
+    top: 0.05rem;
+}
+
+/* Active today sidebar */
+.sidebar-card { }
+
+.active-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.active-row {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    font-size: 0.88rem;
+}
+
+.active-name {
+    flex: 1;
+    font-family: var(--font-heading);
+    font-size: 0.82rem;
+    letter-spacing: 0.03em;
+    color: var(--color-text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.active-posts { font-size: 0.75rem; white-space: nowrap; }
+
+/* -----------------------------------------------------------------------
+   RESPONSIVE
+----------------------------------------------------------------------- */
+@media (max-width: 760px) {
+    .tavern-layout {
+        grid-template-columns: 1fr;
+    }
+    /* Move sidebar above feed on mobile */
+    .tavern-sidebar { order: -1; }
+    .tavern-header  { flex-direction: column; }
+}
+
+@media (max-width: 480px) {
+    .message-card   { padding: 0.85rem 1rem; }
+    .msg-actions    { opacity: 1; }   /* Always visible on touch */
+}

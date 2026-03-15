@@ -1,0 +1,416 @@
+/* =============================================================================
+   DASHBOARD STYLES — assets/css/dashboard.css
+   ============================================================================= */
+
+/* -----------------------------------------------------------------------
+   NARRATIVE BANNER (kept for any future use)
+----------------------------------------------------------------------- */
+.narrative-banner {
+    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+    border: 1px solid var(--color-border-gold);
+    border-left: 4px solid var(--color-gold);
+    border-radius: var(--radius-lg);
+    margin-bottom: 1.5rem;
+    box-shadow: var(--shadow-gold);
+    animation: slideDown 0.35s ease;
+}
+
+@keyframes slideDown {
+    from { opacity: 0; transform: translateY(-12px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
+.narrative-inner {
+    display: flex;
+    align-items: flex-start;
+    gap: 1rem;
+    padding: 1.25rem 1.5rem;
+}
+
+.narrative-icon {
+    font-size: 2rem;
+    flex-shrink: 0;
+    filter: drop-shadow(0 0 8px rgba(212,160,23,0.5));
+}
+
+.narrative-body { flex: 1; }
+
+.narrative-text {
+    font-family: var(--font-body);
+    font-size: 1.05rem;
+    font-style: italic;
+    color: var(--color-text);
+    line-height: 1.6;
+    margin-bottom: 0.75rem;
+}
+
+.narrative-rewards {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+.reward-badge {
+    display: inline-block;
+    padding: 0.25rem 0.75rem;
+    border-radius: 20px;
+    font-family: var(--font-heading);
+    font-size: 0.75rem;
+    letter-spacing: 0.06em;
+    font-weight: 600;
+}
+
+.xp-badge    { background: rgba(212,160,23,0.15); color: var(--color-gold-light); border: 1px solid var(--color-gold-dark); }
+.big-badge   { background: rgba(139,92,246,0.15);  color: #c4b5fd;                border: 1px solid #7c3aed; }
+.level-badge { background: rgba(34,197,94,0.15);   color: #86efac;                border: 1px solid #166534; }
+
+.narrative-close {
+    background: none;
+    border: none;
+    color: var(--color-text-dim);
+    cursor: pointer;
+    font-size: 1rem;
+    padding: 0.25rem;
+    line-height: 1;
+    flex-shrink: 0;
+}
+.narrative-close:hover { color: var(--color-text-muted); }
+
+/* -----------------------------------------------------------------------
+   DASHBOARD GRID LAYOUT
+----------------------------------------------------------------------- */
+.dash-grid {
+    display: grid;
+    grid-template-columns: 320px 1fr;
+    gap: 1.25rem;
+    align-items: start;
+}
+
+.dash-col-left,
+.dash-col-right {
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+}
+
+/* -----------------------------------------------------------------------
+   PLAYER STATS CARD
+----------------------------------------------------------------------- */
+.stats-header {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 1.25rem;
+}
+
+.stats-avatar {
+    font-size: 2.5rem;
+    filter: drop-shadow(0 0 10px rgba(212,160,23,0.35));
+    flex-shrink: 0;
+}
+
+.stats-identity { flex: 1; }
+
+.stats-username {
+    font-family: var(--font-heading);
+    font-size: 1.1rem;
+    color: var(--color-gold-light);
+    letter-spacing: 0.04em;
+}
+
+.stats-class {
+    font-size: 0.82rem;
+    color: var(--color-text-muted);
+    font-family: var(--font-heading);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+}
+
+.stats-level {
+    text-align: center;
+    background: rgba(212,160,23,0.1);
+    border: 1px solid var(--color-border-gold);
+    border-radius: var(--radius);
+    padding: 0.4rem 0.75rem;
+    flex-shrink: 0;
+}
+
+.level-number {
+    display: block;
+    font-family: var(--font-display);
+    font-size: 1.6rem;
+    color: var(--color-gold-light);
+    line-height: 1;
+}
+
+.level-label {
+    display: block;
+    font-family: var(--font-heading);
+    font-size: 0.6rem;
+    letter-spacing: 0.15em;
+    color: var(--color-text-muted);
+    margin-top: 0.15rem;
+}
+
+/* XP Bar */
+.xp-bar-wrap { margin-bottom: 1.25rem; }
+
+.xp-bar-labels {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.82rem;
+    margin-bottom: 0.35rem;
+    font-family: var(--font-heading);
+    letter-spacing: 0.04em;
+}
+
+.xp-bar-track {
+    height: 8px;
+    background: var(--color-bg-input);
+    border-radius: 4px;
+    overflow: hidden;
+    border: 1px solid var(--color-border);
+}
+
+.xp-bar-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--color-gold-dark), var(--color-gold-light));
+    border-radius: 4px;
+    transition: width 0.6s ease;
+}
+
+/* Wealth Grid */
+.wealth-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.75rem;
+}
+
+.wealth-stat {
+    background: var(--color-bg-input);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius);
+    padding: 0.6rem 0.75rem;
+    text-align: center;
+}
+
+.wealth-value {
+    display: block;
+    font-family: var(--font-heading);
+    font-size: 1.05rem;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+}
+
+.wealth-label {
+    display: block;
+    font-size: 0.72rem;
+    color: var(--color-text-muted);
+    font-family: var(--font-heading);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin-top: 0.2rem;
+}
+
+/* -----------------------------------------------------------------------
+   ADVENTURE CTA CARD
+----------------------------------------------------------------------- */
+.dash-adventure-cta {
+    text-align: center;
+    padding: 1.75rem 1.5rem;
+    transition: all var(--transition);
+}
+
+.dash-adventure-cta:not(.adv-exhausted) {
+    border-color: var(--color-border-gold);
+    box-shadow: var(--shadow-gold);
+}
+
+.dash-adventure-cta.adv-exhausted {
+    opacity: 0.65;
+}
+
+.adv-cta-icon {
+    font-size: 2.5rem;
+    display: block;
+    margin-bottom: 0.75rem;
+    filter: drop-shadow(0 0 10px rgba(212,160,23,0.35));
+}
+
+.dash-adventure-cta h3 {
+    margin-bottom: 0;
+}
+
+/* Action pips */
+.action-pips {
+    display: flex;
+    gap: 5px;
+    flex-wrap: wrap;
+    margin-bottom: 0.6rem;
+}
+
+.action-pip {
+    width: 20px;
+    height: 20px;
+    border-radius: 3px;
+    transition: background 0.2s;
+}
+
+.action-pip.available {
+    background: var(--color-gold);
+    box-shadow: 0 0 6px rgba(212,160,23,0.4);
+}
+.action-pip.used {
+    background: var(--color-bg-input);
+    border: 1px solid var(--color-border);
+}
+
+.daily-count {
+    font-size: 0.9rem;
+    color: var(--color-text-muted);
+    margin-bottom: 0.6rem;
+}
+
+/* -----------------------------------------------------------------------
+   PORTFOLIO SNAPSHOT CARD
+----------------------------------------------------------------------- */
+.dash-port-snap { }
+
+/* -----------------------------------------------------------------------
+   RECENT ADVENTURES (reuses entry-row styles from main.css)
+----------------------------------------------------------------------- */
+.entries-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.entry-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.75rem;
+    padding: 0.75rem;
+    background: var(--color-bg-input);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius);
+}
+
+.entry-icon { font-size: 1.3rem; flex-shrink: 0; margin-top: 0.1rem; }
+
+.entry-body { flex: 1; min-width: 0; }
+
+.entry-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 0.5rem;
+    margin-bottom: 0.2rem;
+}
+
+.entry-type {
+    font-family: var(--font-heading);
+    font-size: 0.78rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+}
+
+.entry-amount {
+    font-family: var(--font-heading);
+    font-size: 0.85rem;
+    white-space: nowrap;
+}
+
+.entry-desc {
+    font-size: 0.88rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    margin-bottom: 0.15rem;
+}
+
+.entry-meta { font-size: 0.78rem; }
+
+/* -----------------------------------------------------------------------
+   LEADERBOARD TABLE
+----------------------------------------------------------------------- */
+.card-header-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-bottom: 0.25rem;
+}
+
+.lb-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.88rem;
+}
+
+.lb-table thead th {
+    font-family: var(--font-heading);
+    font-size: 0.7rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--color-text-muted);
+    padding: 0 0.5rem 0.6rem;
+    border-bottom: 1px solid var(--color-border);
+    text-align: left;
+}
+
+.lb-table thead th.text-right { text-align: right; }
+
+.lb-row td {
+    padding: 0.55rem 0.5rem;
+    border-bottom: 1px solid var(--color-border);
+    vertical-align: middle;
+}
+
+.lb-row:last-child td { border-bottom: none; }
+
+.lb-row.lb-me { background: rgba(212,160,23,0.06); }
+
+.lb-rank {
+    width: 40px;
+    font-family: var(--font-heading);
+    color: var(--color-text-muted);
+    font-size: 0.82rem;
+}
+
+.lb-name {
+    font-family: var(--font-heading);
+    font-size: 0.85rem;
+    letter-spacing: 0.03em;
+    color: var(--color-text);
+}
+
+.lb-you {
+    font-size: 0.7rem;
+    color: var(--color-gold);
+    margin-left: 0.35rem;
+}
+
+.lb-level {
+    width: 40px;
+    text-align: center;
+    color: var(--color-text-muted);
+    font-size: 0.82rem;
+}
+
+.lb-score {
+    font-family: var(--font-heading);
+    color: var(--color-gold-light);
+    font-size: 0.88rem;
+}
+
+.text-right { text-align: right; }
+
+/* -----------------------------------------------------------------------
+   RESPONSIVE
+----------------------------------------------------------------------- */
+@media (max-width: 860px) {
+    .dash-grid { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 480px) {
+    .wealth-grid { grid-template-columns: 1fr 1fr; }
+}

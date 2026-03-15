@@ -1,0 +1,319 @@
+/* =============================================================================
+   ADMIN PANEL — assets/css/admin.css
+   ============================================================================= */
+
+.admin-wrap {
+    max-width: 1100px;
+    margin: 0 auto;
+}
+
+.admin-header {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+}
+
+.admin-header h1 { margin-bottom: 0; }
+
+.admin-back {
+    display: inline-block;
+    font-family: var(--font-heading);
+    font-size: 0.75rem;
+    letter-spacing: 0.08em;
+    color: var(--color-text-muted);
+    margin-bottom: 0.35rem;
+    text-decoration: none;
+}
+
+.admin-back:hover { color: var(--color-gold); }
+
+/* -----------------------------------------------------------------------
+   STAT STRIP
+----------------------------------------------------------------------- */
+.admin-stat-grid {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 0.75rem;
+    margin-bottom: 1.5rem;
+}
+
+.admin-stat {
+    background: var(--color-bg-card);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius);
+    padding: 0.75rem;
+    text-align: center;
+}
+
+.as-val {
+    display: block;
+    font-family: var(--font-heading);
+    font-size: 1.4rem;
+    font-weight: 700;
+    color: var(--color-text);
+    line-height: 1;
+}
+
+.as-label {
+    display: block;
+    font-family: var(--font-heading);
+    font-size: 0.6rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--color-text-muted);
+    margin-top: 0.25rem;
+}
+
+/* -----------------------------------------------------------------------
+   NAV GRID
+----------------------------------------------------------------------- */
+.admin-nav-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+}
+
+.admin-nav-card {
+    background: var(--color-bg-card);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+    padding: 1.5rem;
+    text-align: center;
+    text-decoration: none;
+    transition: all var(--transition);
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+}
+
+.admin-nav-card:hover {
+    border-color: var(--color-border-gold);
+    box-shadow: var(--shadow-gold);
+    transform: translateY(-2px);
+}
+
+.anc-icon  { font-size: 2rem; }
+
+.anc-title {
+    font-family: var(--font-heading);
+    font-size: 0.88rem;
+    letter-spacing: 0.05em;
+    color: var(--color-gold-light);
+}
+
+.anc-desc {
+    font-size: 0.8rem;
+    color: var(--color-text-muted);
+}
+
+/* -----------------------------------------------------------------------
+   CRON QUICK VIEW
+----------------------------------------------------------------------- */
+.admin-cron-quick { }
+
+.cron-quick-row {
+    display: flex;
+    gap: 1rem;
+    padding: 0.4rem 0;
+    font-size: 0.88rem;
+    border-bottom: 1px solid var(--color-border);
+}
+
+.cron-quick-row:last-child { border-bottom: none; }
+
+/* -----------------------------------------------------------------------
+   ADMIN TABLES
+----------------------------------------------------------------------- */
+.admin-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.84rem;
+}
+
+.admin-table thead th {
+    font-family: var(--font-heading);
+    font-size: 0.65rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--color-text-muted);
+    padding: 0.75rem 1rem;
+    background: rgba(255,255,255,0.02);
+    border-bottom: 1px solid var(--color-border);
+    text-align: left;
+    white-space: nowrap;
+}
+
+.admin-table tbody td {
+    padding: 0.65rem 1rem;
+    border-bottom: 1px solid var(--color-border);
+    vertical-align: middle;
+}
+
+.admin-table tbody tr:last-child td { border-bottom: none; }
+.admin-table tbody tr:hover td { background: rgba(255,255,255,0.015); }
+
+.row-banned td  { opacity: 0.6; }
+.row-inactive td { opacity: 0.5; }
+
+/* Status tags */
+.status-tag {
+    display: inline-block;
+    font-family: var(--font-heading);
+    font-size: 0.62rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    border-radius: 20px;
+    padding: 0.1rem 0.5rem;
+    border: 1px solid;
+}
+
+.tag-ok   { color: var(--color-green); border-color: var(--color-green-dark); background: rgba(34,197,94,0.08); }
+.tag-warn { color: #f59e0b; border-color: #92400e; background: rgba(245,158,11,0.08); }
+.tag-bad  { color: var(--color-red);   border-color: #7f1d1d;                 background: rgba(239,68,68,0.08); }
+
+.admin-tag {
+    font-family: var(--font-heading);
+    font-size: 0.6rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--color-gold);
+    background: rgba(212,160,23,0.1);
+    border: 1px solid var(--color-gold-dark);
+    border-radius: 20px;
+    padding: 0.1rem 0.45rem;
+    margin-left: 0.3rem;
+}
+
+/* Action buttons */
+.admin-action-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.3rem;
+}
+
+.btn-admin-action {
+    background: transparent;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius);
+    color: var(--color-text-muted);
+    cursor: pointer;
+    font-family: var(--font-heading);
+    font-size: 0.65rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    padding: 0.25rem 0.55rem;
+    transition: all var(--transition);
+    white-space: nowrap;
+}
+
+.btn-admin-action:hover      { color: var(--color-text); border-color: var(--color-text-muted); }
+.btn-admin-action.danger:hover { color: var(--color-red); border-color: var(--color-red); }
+
+/* -----------------------------------------------------------------------
+   SEARCH FORM
+----------------------------------------------------------------------- */
+.admin-search-form {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 1.25rem;
+}
+
+.admin-search-form input {
+    flex: 1;
+    max-width: 340px;
+}
+
+/* -----------------------------------------------------------------------
+   SETTINGS TABLE
+----------------------------------------------------------------------- */
+.setting-key {
+    font-family: monospace;
+    font-size: 0.82rem;
+    color: var(--color-gold-light);
+    background: rgba(212,160,23,0.06);
+    padding: 0.1rem 0.35rem;
+    border-radius: 3px;
+}
+
+.setting-input {
+    width: 100%;
+    max-width: 320px;
+    padding: 0.4rem 0.65rem !important;
+    font-size: 0.88rem !important;
+}
+
+/* -----------------------------------------------------------------------
+   CRON HEALTH PAGE
+----------------------------------------------------------------------- */
+.cron-status-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1rem;
+    margin-bottom: 0.5rem;
+}
+
+.cron-status-card {
+    position: relative;
+    padding-left: 1.75rem;
+}
+
+.cron-status-indicator {
+    position: absolute;
+    left: 1rem;
+    top: 1.1rem;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+}
+
+.cron-status-indicator.healthy { background: var(--color-green); box-shadow: 0 0 6px var(--color-green); }
+.cron-status-indicator.stale   { background: var(--color-red);   box-shadow: 0 0 6px var(--color-red); }
+
+.cron-meta {
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+    font-size: 0.85rem;
+    margin-top: 0.5rem;
+}
+
+.log-header {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-bottom: 0.75rem;
+}
+
+.log-tail {
+    background: #060810;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius);
+    padding: 0.85rem 1rem;
+    font-family: monospace;
+    font-size: 0.75rem;
+    color: #7fba7f;
+    overflow-x: auto;
+    max-height: 320px;
+    overflow-y: auto;
+    white-space: pre-wrap;
+    word-break: break-all;
+    line-height: 1.5;
+}
+
+/* -----------------------------------------------------------------------
+   RESPONSIVE
+----------------------------------------------------------------------- */
+@media (max-width: 860px) {
+    .admin-stat-grid { grid-template-columns: repeat(3, 1fr); }
+    .admin-nav-grid  { grid-template-columns: repeat(2, 1fr); }
+    .cron-status-grid { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 540px) {
+    .admin-stat-grid { grid-template-columns: repeat(2, 1fr); }
+    .admin-nav-grid  { grid-template-columns: 1fr; }
+}

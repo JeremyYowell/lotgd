@@ -1,0 +1,10 @@
+# /admin/.htaccess
+# Admin directory — access is controlled by PHP (Session::requireAdmin())
+# This prevents directory listing and direct file browsing
+
+Options -Indexes
+
+# Optionally restrict to your IP during development:
+# Order deny,allow
+# Deny from all
+# Allow from YOUR.IP.ADDRESS.HERE

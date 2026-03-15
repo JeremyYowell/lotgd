@@ -1,0 +1,380 @@
+/* =============================================================================
+   PORTFOLIO PAGE — assets/css/portfolio.css
+   ============================================================================= */
+
+.port-wrap {
+    max-width: 1100px;
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+}
+
+/* -----------------------------------------------------------------------
+   HEADER
+----------------------------------------------------------------------- */
+.port-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 1rem;
+}
+
+.port-header h1 { margin-bottom: 0.25rem; }
+
+.port-header-gold {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    background: var(--color-bg-card);
+    border: 1px solid var(--color-border-gold);
+    border-radius: var(--radius-lg);
+    padding: 0.65rem 1.5rem;
+    box-shadow: var(--shadow-gold);
+    flex-shrink: 0;
+}
+
+.port-gold-label {
+    font-family: var(--font-heading);
+    font-size: 0.62rem;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--color-text-muted);
+}
+
+.port-gold-val {
+    font-family: var(--font-display);
+    font-size: 1.6rem;
+    line-height: 1.1;
+    margin-top: 0.15rem;
+}
+
+/* -----------------------------------------------------------------------
+   SUMMARY STRIP
+----------------------------------------------------------------------- */
+.port-summary {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 0.75rem;
+}
+
+.psum-stat {
+    background: var(--color-bg-card);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius);
+    padding: 0.75rem 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+}
+
+.psum-label {
+    font-family: var(--font-heading);
+    font-size: 0.65rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--color-text-muted);
+}
+
+.psum-val {
+    font-family: var(--font-heading);
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--color-text);
+    letter-spacing: 0.02em;
+}
+
+/* -----------------------------------------------------------------------
+   LAYOUT
+----------------------------------------------------------------------- */
+.port-layout {
+    display: grid;
+    grid-template-columns: 1fr 300px;
+    gap: 1.25rem;
+    align-items: start;
+}
+
+.port-main {
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+}
+
+.port-sidebar {
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+}
+
+/* -----------------------------------------------------------------------
+   HOLDINGS TABLE
+----------------------------------------------------------------------- */
+.port-empty {
+    text-align: center;
+    padding: 2rem;
+    color: var(--color-text-muted);
+    font-size: 0.95rem;
+}
+
+.holdings-table-wrap { overflow-x: auto; }
+
+.holdings-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.85rem;
+    white-space: nowrap;
+}
+
+.holdings-table thead th {
+    font-family: var(--font-heading);
+    font-size: 0.65rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--color-text-muted);
+    padding: 0 0.75rem 0.65rem;
+    border-bottom: 1px solid var(--color-border);
+    text-align: left;
+}
+
+.holdings-table tbody td {
+    padding: 0.6rem 0.75rem;
+    border-bottom: 1px solid var(--color-border);
+    vertical-align: middle;
+}
+
+.holdings-table tbody tr:last-child td { border-bottom: none; }
+.holdings-table tbody tr:hover td { background: rgba(255,255,255,0.02); }
+
+.ticker-cell strong {
+    font-family: var(--font-heading);
+    font-size: 0.88rem;
+    letter-spacing: 0.04em;
+    color: var(--color-gold-light);
+}
+
+.company-cell {
+    max-width: 160px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    font-size: 0.8rem;
+}
+
+.btn-sell-quick {
+    background: transparent;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius);
+    color: var(--color-text-muted);
+    cursor: pointer;
+    font-family: var(--font-heading);
+    font-size: 0.68rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    padding: 0.2rem 0.55rem;
+    transition: all var(--transition);
+}
+
+.btn-sell-quick:hover {
+    border-color: var(--color-red);
+    color: var(--color-red);
+}
+
+/* -----------------------------------------------------------------------
+   TRADE HISTORY TABLE
+----------------------------------------------------------------------- */
+.history-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.84rem;
+}
+
+.history-table thead th {
+    font-family: var(--font-heading);
+    font-size: 0.65rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--color-text-muted);
+    padding: 0 0.65rem 0.6rem;
+    border-bottom: 1px solid var(--color-border);
+    text-align: left;
+}
+
+.history-table td {
+    padding: 0.5rem 0.65rem;
+    border-bottom: 1px solid var(--color-border);
+    vertical-align: middle;
+}
+
+.history-table tr:last-child td { border-bottom: none; }
+
+.trade-type-badge {
+    font-family: var(--font-heading);
+    font-size: 0.65rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    border-radius: 20px;
+    padding: 0.15rem 0.55rem;
+    border: 1px solid;
+}
+
+.buy-badge  { color: var(--color-green); border-color: var(--color-green-dark); background: rgba(34,197,94,0.08); }
+.sell-badge { color: var(--color-red);   border-color: #7f1d1d;                 background: rgba(239,68,68,0.08); }
+
+/* -----------------------------------------------------------------------
+   TRADE FORM
+----------------------------------------------------------------------- */
+.trade-tabs {
+    display: flex;
+    gap: 0;
+    margin-bottom: 1.25rem;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius);
+    overflow: hidden;
+}
+
+.trade-tab {
+    flex: 1;
+    background: var(--color-bg-input);
+    border: none;
+    color: var(--color-text-muted);
+    font-family: var(--font-heading);
+    font-size: 0.78rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    padding: 0.55rem;
+    cursor: pointer;
+    transition: all var(--transition);
+}
+
+.trade-tab.active {
+    background: rgba(212,160,23,0.12);
+    color: var(--color-gold-light);
+}
+
+.ticker-input-wrap { position: relative; }
+
+.ticker-suggestions {
+    position: absolute;
+    top: 100%;
+    left: 0; right: 0;
+    background: var(--color-bg-card);
+    border: 1px solid var(--color-border-gold);
+    border-radius: var(--radius);
+    z-index: 50;
+    max-height: 200px;
+    overflow-y: auto;
+    display: none;
+}
+
+.ticker-info {
+    font-size: 0.82rem;
+    color: var(--color-text-muted);
+    margin-top: 0.35rem;
+    min-height: 1.2rem;
+}
+
+.trade-preview {
+    font-size: 0.82rem;
+    color: var(--color-gold);
+    margin-top: 0.35rem;
+    min-height: 1.2rem;
+    font-family: var(--font-heading);
+    letter-spacing: 0.04em;
+}
+
+/* -----------------------------------------------------------------------
+   STOCK SEARCH
+----------------------------------------------------------------------- */
+.search-results { }
+
+.search-row {
+    padding: 0.5rem 0.25rem;
+    border-bottom: 1px solid var(--color-border);
+    cursor: pointer;
+    font-size: 0.85rem;
+    display: flex;
+    align-items: baseline;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+    transition: background var(--transition);
+    border-radius: var(--radius);
+}
+
+.search-row:last-child { border-bottom: none; }
+.search-row:hover { background: rgba(212,160,23,0.06); padding-left: 0.5rem; }
+
+.search-row strong {
+    font-family: var(--font-heading);
+    font-size: 0.85rem;
+    letter-spacing: 0.04em;
+    color: var(--color-gold-light);
+    min-width: 52px;
+}
+
+/* -----------------------------------------------------------------------
+   MINI LEADERBOARD
+----------------------------------------------------------------------- */
+.lb-mini-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.84rem;
+}
+
+.lb-mini-table td {
+    padding: 0.45rem 0.25rem;
+    border-bottom: 1px solid var(--color-border);
+    vertical-align: middle;
+}
+
+.lb-mini-table tr:last-child td { border-bottom: none; }
+
+.lb-mini-table tr.lb-me td { background: rgba(212,160,23,0.06); }
+
+.lbm-pos {
+    width: 32px;
+    font-family: var(--font-heading);
+    font-size: 0.75rem;
+    color: var(--color-text-muted);
+}
+
+.lbm-name {
+    font-family: var(--font-heading);
+    font-size: 0.82rem;
+    letter-spacing: 0.02em;
+    color: var(--color-text);
+}
+
+.lbm-ret {
+    text-align: right;
+    font-family: var(--font-heading);
+    font-size: 0.82rem;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.you-tag {
+    font-family: var(--font-heading);
+    font-size: 0.6rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--color-gold);
+    background: rgba(212,160,23,0.12);
+    border: 1px solid var(--color-gold-dark);
+    border-radius: 20px;
+    padding: 0.1rem 0.4rem;
+    margin-left: 0.25rem;
+}
+
+/* -----------------------------------------------------------------------
+   RESPONSIVE
+----------------------------------------------------------------------- */
+@media (max-width: 960px) {
+    .port-layout  { grid-template-columns: 1fr; }
+    .port-summary { grid-template-columns: repeat(3, 1fr); }
+}
+
+@media (max-width: 600px) {
+    .port-header  { flex-direction: column; }
+    .port-summary { grid-template-columns: repeat(2, 1fr); }
+    .company-cell { display: none; }
+}

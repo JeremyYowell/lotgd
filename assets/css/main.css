@@ -1,0 +1,526 @@
+/* =============================================================================
+   LEGENDS OF THE GREEN DOLLAR — main.css
+   Dark fantasy RPG aesthetic with gold accents
+   ============================================================================= */
+
+/* -----------------------------------------------------------------------
+   CSS VARIABLES
+----------------------------------------------------------------------- */
+:root {
+    /* Core palette */
+    --color-bg:          #0a0d14;
+    --color-bg-card:     #111827;
+    --color-bg-input:    #1a2235;
+    --color-border:      #2a3a55;
+    --color-border-gold: #8a6a1a;
+
+    /* Text */
+    --color-text:        #c8d8e8;
+    --color-text-muted:  #6b82a0;
+    --color-text-dim:    #3d5070;
+    --color-heading:     #f0d980;
+
+    /* Accents */
+    --color-gold:        #d4a017;
+    --color-gold-light:  #f0d980;
+    --color-gold-dark:   #8a6a1a;
+    --color-green:       #22c55e;
+    --color-green-dark:  #15803d;
+    --color-red:         #ef4444;
+    --color-blue:        #3b82f6;
+
+    /* Alerts */
+    --color-success-bg:  #052e16;
+    --color-success-text:#86efac;
+    --color-error-bg:    #2d0a0a;
+    --color-error-text:  #fca5a5;
+    --color-info-bg:     #0c1a3d;
+    --color-info-text:   #93c5fd;
+    --color-warning-bg:  #2d1a00;
+    --color-warning-text:#fcd34d;
+
+    /* Typography */
+    --font-display:  'Cinzel Decorative', serif;
+    --font-heading:  'Cinzel', serif;
+    --font-body:     'Crimson Pro', Georgia, serif;
+
+    /* Spacing & shape */
+    --radius:        6px;
+    --radius-lg:     12px;
+    --shadow:        0 4px 24px rgba(0,0,0,0.5);
+    --shadow-gold:   0 0 20px rgba(212,160,23,0.15);
+    --transition:    0.2s ease;
+
+    /* Layout */
+    --nav-height:    64px;
+    --content-width: 900px;
+    --card-width:    440px;
+}
+
+/* -----------------------------------------------------------------------
+   RESET & BASE
+----------------------------------------------------------------------- */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html { font-size: 16px; scroll-behavior: smooth; }
+
+body {
+    background-color: var(--color-bg);
+    color: var(--color-text);
+    font-family: var(--font-body);
+    font-size: 1.1rem;
+    line-height: 1.65;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    /* Subtle parchment texture via repeating gradient */
+    background-image:
+        radial-gradient(ellipse at 20% 10%, rgba(212,160,23,0.04) 0%, transparent 50%),
+        radial-gradient(ellipse at 80% 90%, rgba(34,197,94,0.03) 0%, transparent 50%);
+}
+
+/* -----------------------------------------------------------------------
+   TYPOGRAPHY
+----------------------------------------------------------------------- */
+h1, h2, h3, h4, h5, h6 {
+    font-family: var(--font-heading);
+    color: var(--color-heading);
+    line-height: 1.2;
+    letter-spacing: 0.04em;
+}
+
+h1 { font-size: 2rem; }
+h2 { font-size: 1.5rem; }
+h3 { font-size: 1.2rem; }
+
+a {
+    color: var(--color-gold);
+    text-decoration: none;
+    transition: color var(--transition);
+}
+a:hover { color: var(--color-gold-light); }
+
+p { margin-bottom: 1rem; }
+p:last-child { margin-bottom: 0; }
+
+strong { color: var(--color-gold-light); font-weight: 600; }
+
+/* -----------------------------------------------------------------------
+   NAVIGATION
+----------------------------------------------------------------------- */
+.site-nav {
+    height: var(--nav-height);
+    background: rgba(10,13,20,0.95);
+    border-bottom: 1px solid var(--color-border-gold);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 2rem;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    backdrop-filter: blur(8px);
+    box-shadow: 0 2px 16px rgba(0,0,0,0.6);
+}
+
+.nav-brand {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: var(--color-gold-light);
+    font-family: var(--font-display);
+    font-size: 1.1rem;
+    letter-spacing: 0.06em;
+}
+.nav-brand:hover { color: #fff; }
+.nav-brand-icon { font-size: 1.3rem; }
+
+.nav-links {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+}
+.nav-links a {
+    color: var(--color-text-muted);
+    padding: 0.4rem 0.85rem;
+    border-radius: var(--radius);
+    font-family: var(--font-heading);
+    font-size: 0.8rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    transition: all var(--transition);
+}
+.nav-links a:hover {
+    color: var(--color-gold-light);
+    background: rgba(212,160,23,0.08);
+}
+.nav-links a.nav-cta {
+    color: var(--color-bg);
+    background: var(--color-gold);
+    font-weight: 600;
+}
+.nav-links a.nav-cta:hover { background: var(--color-gold-light); }
+.nav-links a.nav-admin { color: var(--color-red); }
+
+.nav-user {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    font-size: 0.9rem;
+}
+.nav-username {
+    color: var(--color-gold-light);
+    font-family: var(--font-heading);
+    font-size: 0.85rem;
+    letter-spacing: 0.04em;
+}
+.nav-logout {
+    color: var(--color-text-muted);
+    font-size: 0.8rem;
+}
+.nav-logout:hover { color: var(--color-red); }
+
+/* -----------------------------------------------------------------------
+   MAIN & FOOTER
+----------------------------------------------------------------------- */
+.site-main {
+    flex: 1;
+    padding: 2.5rem 1.5rem;
+    width: 100%;
+    max-width: var(--content-width);
+    margin: 0 auto;
+}
+
+.site-main.centered {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding-top: 4rem;
+}
+
+.site-footer {
+    text-align: center;
+    padding: 1.5rem;
+    color: var(--color-text-dim);
+    font-size: 0.85rem;
+    border-top: 1px solid var(--color-border);
+    font-family: var(--font-heading);
+    letter-spacing: 0.05em;
+}
+.env-tag {
+    color: #ef4444;
+    font-weight: 600;
+}
+
+/* -----------------------------------------------------------------------
+   CARDS
+----------------------------------------------------------------------- */
+.card {
+    background: var(--color-bg-card);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+    padding: 2rem 2.5rem;
+    box-shadow: var(--shadow);
+}
+
+.card-gold {
+    border-color: var(--color-border-gold);
+    box-shadow: var(--shadow), var(--shadow-gold);
+}
+
+/* -----------------------------------------------------------------------
+   FORMS
+----------------------------------------------------------------------- */
+.form-group {
+    margin-bottom: 1.4rem;
+}
+
+label {
+    display: block;
+    font-family: var(--font-heading);
+    font-size: 0.78rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--color-text-muted);
+    margin-bottom: 0.45rem;
+}
+
+input[type="text"],
+input[type="email"],
+input[type="password"],
+input[type="number"],
+select,
+textarea {
+    width: 100%;
+    background: var(--color-bg-input);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius);
+    color: var(--color-text);
+    font-family: var(--font-body);
+    font-size: 1rem;
+    padding: 0.65rem 1rem;
+    transition: border-color var(--transition), box-shadow var(--transition);
+    outline: none;
+    -webkit-appearance: none;
+}
+
+input:focus, select:focus, textarea:focus {
+    border-color: var(--color-gold-dark);
+    box-shadow: 0 0 0 3px rgba(212,160,23,0.12);
+}
+
+input::placeholder { color: var(--color-text-dim); }
+
+.form-hint {
+    font-size: 0.85rem;
+    color: var(--color-text-muted);
+    margin-top: 0.35rem;
+}
+
+/* Class selector grid */
+.class-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    gap: 0.75rem;
+    margin-top: 0.5rem;
+}
+
+.class-option {
+    position: relative;
+}
+
+.class-option input[type="radio"] {
+    position: absolute;
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.class-option label {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 1rem 0.5rem;
+    background: var(--color-bg-input);
+    border: 2px solid var(--color-border);
+    border-radius: var(--radius);
+    cursor: pointer;
+    transition: all var(--transition);
+    text-transform: none;
+    font-family: var(--font-body);
+    font-size: 0.9rem;
+    letter-spacing: 0;
+    color: var(--color-text-muted);
+    text-align: center;
+}
+
+.class-option label .class-icon { font-size: 1.6rem; }
+.class-option label .class-name {
+    font-family: var(--font-heading);
+    font-size: 0.75rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--color-text);
+}
+.class-option label .class-desc {
+    font-size: 0.78rem;
+    color: var(--color-text-muted);
+    line-height: 1.3;
+}
+
+.class-option input:checked + label {
+    border-color: var(--color-gold);
+    background: rgba(212,160,23,0.08);
+    color: var(--color-gold-light);
+    box-shadow: 0 0 12px rgba(212,160,23,0.2);
+}
+.class-option label:hover {
+    border-color: var(--color-gold-dark);
+    color: var(--color-text);
+}
+
+/* -----------------------------------------------------------------------
+   BUTTONS
+----------------------------------------------------------------------- */
+.btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 0.7rem 1.75rem;
+    border: none;
+    border-radius: var(--radius);
+    font-family: var(--font-heading);
+    font-size: 0.85rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: all var(--transition);
+    text-decoration: none;
+    line-height: 1;
+}
+
+.btn-primary {
+    background: var(--color-gold);
+    color: #0a0d14;
+    font-weight: 700;
+    box-shadow: 0 2px 12px rgba(212,160,23,0.3);
+}
+.btn-primary:hover {
+    background: var(--color-gold-light);
+    color: #0a0d14;
+    box-shadow: 0 4px 20px rgba(212,160,23,0.5);
+    transform: translateY(-1px);
+}
+
+.btn-secondary {
+    background: transparent;
+    color: var(--color-text-muted);
+    border: 1px solid var(--color-border);
+}
+.btn-secondary:hover {
+    color: var(--color-text);
+    border-color: var(--color-text-muted);
+}
+
+.btn-danger {
+    background: var(--color-red);
+    color: #fff;
+}
+.btn-danger:hover { background: #dc2626; }
+
+.btn-full { width: 100%; }
+
+.btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+    transform: none;
+}
+
+/* -----------------------------------------------------------------------
+   FLASH MESSAGES (override bootstrap.php inline styles with classes)
+----------------------------------------------------------------------- */
+.flash-success {
+    color: var(--color-success-text);
+    background: var(--color-success-bg);
+    border: 1px solid #166534;
+    padding: 0.75rem 1rem;
+    border-radius: var(--radius);
+    margin-bottom: 1rem;
+    font-size: 0.95rem;
+}
+.flash-error {
+    color: var(--color-error-text);
+    background: var(--color-error-bg);
+    border: 1px solid #7f1d1d;
+    padding: 0.75rem 1rem;
+    border-radius: var(--radius);
+    margin-bottom: 1rem;
+    font-size: 0.95rem;
+}
+.flash-info {
+    color: var(--color-info-text);
+    background: var(--color-info-bg);
+    border: 1px solid #1e3a8a;
+    padding: 0.75rem 1rem;
+    border-radius: var(--radius);
+    margin-bottom: 1rem;
+    font-size: 0.95rem;
+}
+.flash-warning {
+    color: var(--color-warning-text);
+    background: var(--color-warning-bg);
+    border: 1px solid #92400e;
+    padding: 0.75rem 1rem;
+    border-radius: var(--radius);
+    margin-bottom: 1rem;
+    font-size: 0.95rem;
+}
+
+/* -----------------------------------------------------------------------
+   AUTH PAGES (login / register)
+----------------------------------------------------------------------- */
+.auth-wrap {
+    width: 100%;
+    max-width: var(--card-width);
+    margin: 0 auto;
+}
+
+.auth-crest {
+    text-align: center;
+    margin-bottom: 1.75rem;
+}
+.auth-crest-icon {
+    font-size: 3rem;
+    display: block;
+    margin-bottom: 0.5rem;
+    filter: drop-shadow(0 0 12px rgba(212,160,23,0.4));
+}
+.auth-crest-title {
+    font-family: var(--font-display);
+    font-size: 1.3rem;
+    color: var(--color-gold-light);
+    letter-spacing: 0.06em;
+    line-height: 1.3;
+}
+.auth-crest-sub {
+    font-family: var(--font-heading);
+    font-size: 0.75rem;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--color-text-muted);
+    margin-top: 0.3rem;
+}
+
+.auth-divider {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin: 1.5rem 0;
+    color: var(--color-text-dim);
+    font-size: 0.8rem;
+    font-family: var(--font-heading);
+    letter-spacing: 0.1em;
+}
+.auth-divider::before,
+.auth-divider::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--color-border);
+}
+
+.auth-footer-link {
+    text-align: center;
+    margin-top: 1.5rem;
+    font-size: 0.9rem;
+    color: var(--color-text-muted);
+}
+
+/* -----------------------------------------------------------------------
+   UTILITIES
+----------------------------------------------------------------------- */
+.text-center  { text-align: center; }
+.text-muted   { color: var(--color-text-muted); }
+.text-gold    { color: var(--color-gold-light); }
+.text-green   { color: var(--color-green); }
+.text-red     { color: var(--color-red); }
+.mt-1 { margin-top: 0.5rem; }
+.mt-2 { margin-top: 1rem; }
+.mt-3 { margin-top: 1.5rem; }
+.mb-1 { margin-bottom: 0.5rem; }
+.mb-2 { margin-bottom: 1rem; }
+.mb-3 { margin-bottom: 1.5rem; }
+
+/* -----------------------------------------------------------------------
+   RESPONSIVE
+----------------------------------------------------------------------- */
+@media (max-width: 600px) {
+    .site-nav { padding: 0 1rem; }
+    .nav-links a { padding: 0.35rem 0.5rem; font-size: 0.72rem; }
+    .site-main { padding: 1.5rem 1rem; }
+    .card { padding: 1.5rem 1.25rem; }
+    h1 { font-size: 1.6rem; }
+    .class-grid { grid-template-columns: repeat(2, 1fr); }
+}
