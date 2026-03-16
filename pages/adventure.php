@@ -264,11 +264,21 @@ ob_start();
             <?php endforeach; ?>
         </div>
 
+        <?php
+        $store       = new Store();
+        $itemBonus   = $store->getRollBonus($userId, $scenario['category']);
+        $totalMod    = $adventure->calculateModifier(
+            (int)$user['level'], $user['class'], $scenario['category'], $itemBonus
+        );
+        ?>
         <div class="encounter-modifier-hint">
-            Your modifier today: <strong class="text-gold">+<?= $adventure->calculateModifier(
-                (int)$user['level'], $user['class'], $scenario['category']
-            ) ?></strong>
-            (Level <?= $user['level'] ?> + class bonus)
+            Your modifier today: <strong class="text-gold">+<?= $totalMod ?></strong>
+            (Level <?= $user['level'] ?>
+            <?php if ($itemBonus > 0): ?>
+                + class + <span style="color:#fbbf24">+<?= $itemBonus ?> gear</span>
+            <?php else: ?>
+                + class bonus
+            <?php endif; ?>)
         </div>
 
     </div>

@@ -74,7 +74,7 @@ class Adventure {
      * Calculate the modifier for a player given their level and class,
      * and the category of the scenario.
      */
-    public function calculateModifier(int $level, string $class, string $category): int {
+    public function calculateModifier(int $level, string $class, string $category, int $itemBonus = 0): int {
         $levelMod = (int) floor($level / 5);   // +1 per 5 levels, max +10
 
         $classMod = 0;
@@ -83,7 +83,7 @@ class Adventure {
             $classMod = self::CLASS_BONUS_VALUE;
         }
 
-        return $levelMod + $classMod;
+        return $levelMod + $classMod + $itemBonus;
     }
 
     /**
@@ -120,23 +120,30 @@ class Adventure {
      * Returns ['xp' => int, 'gold' => int]
      * Gold is negative on failure outcomes.
      */
-    public function calculateRewards(string $outcome, int $baseXp, int $baseGold, int $currentGold): array {
+    public function calculateRewards(
+        string $outcome,
+        int    $baseXp,
+        int    $baseGold,
+        int    $currentGold,
+        float  $xpMultiplier      = 1.0,
+        float  $failureMultiplier = 1.0
+    ): array {
         return match($outcome) {
             'crit_success'  => [
-                'xp'   => (int) round($baseXp   * 1.5),
+                'xp'   => (int) round($baseXp   * 1.5 * $xpMultiplier),
                 'gold' => (int) round($baseGold  * 1.5),
             ],
             'success'       => [
-                'xp'   => $baseXp,
+                'xp'   => (int) round($baseXp * $xpMultiplier),
                 'gold' => $baseGold,
             ],
             'failure'       => [
                 'xp'   => 0,
-                'gold' => -min($currentGold, (int) round($baseGold * 0.25)),
+                'gold' => -min($currentGold, (int) round($baseGold * 0.25 * $failureMultiplier)),
             ],
             'crit_failure'  => [
                 'xp'   => 0,
-                'gold' => -min($currentGold, (int) round($baseGold * 0.5)),
+                'gold' => -min($currentGold, (int) round($baseGold * 0.5 * $failureMultiplier)),
             ],
             default => ['xp' => 0, 'gold' => 0],
         };
@@ -165,22 +172,31 @@ class Adventure {
             return ['success' => false, 'error' => 'Invalid choice.'];
         }
 
+        // Item bonuses from equipped gear
+        $store           = new Store();
+        $itemRollBonus   = $store->getRollBonus((int)$userId, $choice['category']);
+        $xpMultiplier    = $store->getXpMultiplier((int)$userId, $choice['category']);
+        $failureMulti    = $store->getFailureMultiplier((int)$userId, $choice['category']);
+
         // Roll
         $roll     = $this->rollD20();
         $modifier = $this->calculateModifier(
             (int)$user['level'],
             $user['class'],
-            $choice['category']
+            $choice['category'],
+            $itemRollBonus
         );
         $finalRoll = $roll + $modifier;
         $outcome   = $this->determineOutcome($finalRoll, (int)$choice['difficulty']);
 
-        // Rewards
+        // Rewards (with item multipliers applied)
         $rewards = $this->calculateRewards(
             $outcome,
             (int)$choice['base_xp'],
             (int)$choice['base_gold'],
-            (int)$user['gold']
+            (int)$user['gold'],
+            $xpMultiplier,
+            $failureMulti
         );
 
         // Narrative

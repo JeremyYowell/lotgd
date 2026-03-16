@@ -43,6 +43,7 @@
             <a href="<?= BASE_URL ?>/pages/leaderboard.php">Leaderboard</a>
             <a href="<?= BASE_URL ?>/pages/tavern.php">Tavern</a>
             <a href="<?= BASE_URL ?>/pages/portfolio.php">Portfolio</a>
+        <a href="<?= BASE_URL ?>/pages/store.php">Store</a>
             <?php if (Session::isAdmin()): ?>
             <a href="<?= BASE_URL ?>/admin/index.php" class="nav-admin">Admin</a>
             <?php endif; ?>
