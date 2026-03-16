@@ -16,7 +16,34 @@ Session::start();
 
 $db = Database::getInstance();
 
-// Maintenance mode check
+// =========================================================================
+// SESSION EXPIRY DETECTION
+// Gracefully handle sessions that have expired mid-browse.
+// If the session is too old, destroy it and redirect to login
+// rather than letting PHP throw errors on protected pages.
+// =========================================================================
+if (Session::isLoggedIn()) {
+    $loginAt  = (int) Session::get('login_at', 0);
+    $maxAge   = SESSION_LIFETIME; // from config.php (default 7200 = 2 hours)
+
+    if ($loginAt > 0 && (time() - $loginAt) > $maxAge) {
+        // Session has exceeded lifetime — log out cleanly
+        Session::logout();
+        Session::start();
+        Session::setFlash('info', 'Your session expired. Please log in again.');
+
+        // Only redirect if not already on a guest page
+        $guestPages = ['login.php', 'register.php', '404.php'];
+        $current    = basename($_SERVER['SCRIPT_FILENAME'] ?? '');
+        if (!in_array($current, $guestPages)) {
+            Session::redirect('/pages/login.php');
+        }
+    }
+}
+
+// =========================================================================
+// MAINTENANCE MODE
+// =========================================================================
 $maintenanceMode = (bool) $db->getSetting('maintenance_mode', '0');
 if ($maintenanceMode && !Session::isAdmin()) {
     $currentFile = basename($_SERVER['SCRIPT_FILENAME'] ?? '');
@@ -29,13 +56,6 @@ if ($maintenanceMode && !Session::isAdmin()) {
 
 // =========================================================================
 // EMAIL CONFIRMATION GATE
-// Redirect unconfirmed users to the reminder page.
-// Pages exempt from this check:
-//   - confirm_email.php    (the confirmation handler itself)
-//   - confirm_required.php (the reminder page)
-//   - logout.php           (must always work)
-//   - login.php            (guest page)
-//   - register.php         (guest page)
 // =========================================================================
 $confirmationEnabled = (bool) $db->getSetting('email_confirmation_enabled', '1');
 
@@ -46,11 +66,11 @@ if ($confirmationEnabled && Session::isLoggedIn()) {
         'logout.php',
         'login.php',
         'register.php',
+        '404.php',
     ];
     $currentPage = basename($_SERVER['SCRIPT_FILENAME'] ?? '');
 
     if (!in_array($currentPage, $exemptPages)) {
-        // Check confirmation status (cached in session to avoid a DB hit on every page)
         $confirmed = Session::get('email_confirmed', null);
         if ($confirmed === null) {
             $confirmed = (bool) $db->fetchValue(
@@ -66,12 +86,10 @@ if ($confirmationEnabled && Session::isLoggedIn()) {
     }
 }
 
-define('ENV_BANNER', IS_DEV
-    ? '<div style="position:fixed;top:0;left:0;right:0;z-index:9999;background:#b91c1c;'
-      . 'color:#fff;text-align:center;font-size:13px;font-family:monospace;padding:4px 0;">'
-      . '⚠ DEV ENVIRONMENT — DB: ' . DB_NAME . '</div>'
-    : ''
-);
+// =========================================================================
+// ENV BANNER (footer, dev only)
+// =========================================================================
+define('ENV_BANNER', ''); // kept for backward compat, banner now in layout.php
 
 // =========================================================================
 // GLOBAL HELPERS

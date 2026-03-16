@@ -5,22 +5,6 @@
 # Disable directory listing
 Options -Indexes
 
-# PHP error display (overridden by config.php at runtime)
-php_flag display_errors Off
-
-# Protect sensitive files from direct access
-<FilesMatch "\.(sql|log|md|gitignore|gitkeep)$">
-    Order deny,allow
-    Deny from all
-</FilesMatch>
-
-# Block direct access to lib/ and config/
-<IfModule mod_rewrite.c>
-    RewriteEngine On
-
-    # Block lib/ access
-    RewriteRule ^lib/ - [F,L]
-
-    # Block config/ access
-    RewriteRule ^config/ - [F,L]
-</IfModule>
+# Custom error pages
+ErrorDocument 404 /404.php
+ErrorDocument 403 /404.php
