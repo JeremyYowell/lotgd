@@ -31,7 +31,7 @@ class Adventure {
      * Avoids repeating the last 3 scenarios the player has seen.
      */
     public function pickScenario(int $userId, int $level): array|false {
-        // Get recent scenario IDs to avoid repeats
+        // Get recent scenario IDs to avoid immediate repeats
         $recent = $this->db->fetchAll(
             "SELECT scenario_id FROM adventure_log
              WHERE user_id = ? ORDER BY adventured_at DESC LIMIT 3",
@@ -39,16 +39,31 @@ class Adventure {
         );
         $recentIds = array_column($recent, 'scenario_id');
 
-        $exclude = $recentIds
-            ? 'AND id NOT IN (' . implode(',', array_map('intval', $recentIds)) . ')'
-            : '';
+        // First attempt: exclude recently seen scenarios
+        if (!empty($recentIds)) {
+            $exclude    = implode(',', array_map('intval', $recentIds));
+            $scenario   = $this->db->fetchOne(
+                "SELECT * FROM adventure_scenarios
+                 WHERE is_active = 1
+                   AND min_level <= ?
+                   AND max_level >= ?
+                   AND id NOT IN ({$exclude})
+                 ORDER BY RAND()
+                 LIMIT 1",
+                [$level, $level]
+            );
 
+            if ($scenario) return $scenario;
+        }
+
+        // Fallback: pool was exhausted after exclusions — allow any valid scenario
+        // This happens when a player's level only qualifies for a small number of
+        // scenarios and all of them were recently played.
         return $this->db->fetchOne(
             "SELECT * FROM adventure_scenarios
              WHERE is_active = 1
                AND min_level <= ?
                AND max_level >= ?
-               {$exclude}
              ORDER BY RAND()
              LIMIT 1",
             [$level, $level]

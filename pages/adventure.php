@@ -22,6 +22,24 @@ $result   = Session::get('adv_result',   null);
 $scenario = Session::get('adv_scenario', null);
 $choices  = Session::get('adv_choices',  null);
 
+// Guard: if state/data are out of sync (e.g. pickScenario returned false
+// because the scenario pool was exhausted, or session expired mid-adventure)
+// reset cleanly to idle rather than rendering a blank page.
+if ($state === 'scenario' && (empty($scenario) || empty($choices))) {
+    Session::set('adv_state', 'idle');
+    Session::delete('adv_scenario');
+    Session::delete('adv_choices');
+    $state    = 'idle';
+    $scenario = null;
+    $choices  = null;
+}
+if ($state === 'result' && empty($result)) {
+    Session::set('adv_state', 'idle');
+    Session::delete('adv_result');
+    $state  = 'idle';
+    $result = null;
+}
+
 // =========================================================================
 // HANDLE POSTS
 // =========================================================================
