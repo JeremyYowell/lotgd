@@ -8,7 +8,7 @@
 config/config.php
 
 # -----------------------------------------------------------------------
-# LOGS — runtime generated, never committed
+# LOGS — runtime generated
 # -----------------------------------------------------------------------
 logs/
 *.log
@@ -42,3 +42,11 @@ package-lock.json
 # -----------------------------------------------------------------------
 *.tmp
 *.cache
+
+# -----------------------------------------------------------------------
+# SETUP WIZARD
+# The setup/ directory is included in the repo for first-time deployment.
+# The wizard deletes itself on completion. If for some reason it wasn't
+# deleted, do not re-commit it.
+# -----------------------------------------------------------------------
+setup/.installed

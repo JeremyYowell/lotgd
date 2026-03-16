@@ -1,0 +1,2 @@
+# Allow the wizard to run but block direct access to any other files
+Options -Indexes
