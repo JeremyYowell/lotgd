@@ -53,7 +53,7 @@ class Portfolio {
     public function getSpxPriceOnDate(string $date): float|false {
         $row = $this->db->fetchOne(
             "SELECT close_price FROM stock_prices
-             WHERE ticker = '^GSPC' AND price_date >= ?
+             WHERE ticker = 'SPY' AND price_date >= ?
              ORDER BY price_date ASC LIMIT 1",
             [$date]
         );
@@ -64,7 +64,7 @@ class Portfolio {
      * Get latest SPX price.
      */
     public function getLatestSpxPrice(): array|false {
-        return $this->getLatestPrice('^GSPC');
+        return $this->getLatestPrice('SPY');
     }
 
     // =========================================================================

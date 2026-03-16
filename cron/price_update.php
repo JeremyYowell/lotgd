@@ -1,10 +1,22 @@
 #!/usr/bin/env php
 <?php
 /**
- * cron/price_update.php — Nightly price download + daily brief generation
- * =========================================================================
- * DreamHost cron: 0 18 * * 1-5
- * (Weekdays at 6 PM server time, after US market close)
+ * cron/price_update.php — Hourly price download
+ * ================================================
+ * Pulls latest prices for all S&P 500 tickers + SPY (benchmark) from Finnhub.
+ * Safe to run every hour — uses ON DUPLICATE KEY UPDATE so re-runs
+ * on the same calendar date simply refresh the price data.
+ *
+ * DreamHost cron: 0 * * * 1-5
+ * (Every hour on weekdays — market hours are 9:30 AM–4 PM ET)
+ *
+ * The Daily Adventurer's Brief is generated separately by
+ * cron/generate_brief.php (run once after market close, e.g. 6 PM ET)
+ * or via the admin panel.
+ *
+ * Finnhub free tier: 60 calls/minute.
+ * ~501 tickers takes ~9 minutes. Running hourly keeps data fresh
+ * throughout the trading day without hammering the API.
  */
 
 define('CRON_RUNNING', true);
@@ -12,26 +24,25 @@ require_once __DIR__ . '/../bootstrap.php';
 
 $apiKey    = $db->getSetting('finnhub_api_key');
 $today     = date('Y-m-d');
+$hour      = (int)date('G');  // 0-23
 $startTime = microtime(true);
 
 if (!$apiKey || $apiKey === 'YOUR_KEY_HERE') {
-    cronLog('ERROR', 'Finnhub API key not configured.');
+    cronLog('ERROR', 'Finnhub API key not configured in settings table.');
     exit(1);
 }
 
-// Skip if already ran today
-$lastRun = $db->getSetting('portfolio_last_price_update', '');
-if ($lastRun && date('Y-m-d', strtotime($lastRun)) === $today) {
-    cronLog('INFO', 'Price update already ran today. Skipping.');
-    exit(0);
-}
-
 // ---------------------------------------------------------------------------
-// Get ticker list
+// Get ticker list (active S&P 500 + SPY as benchmark)
 // ---------------------------------------------------------------------------
 $tickers    = $db->fetchAll("SELECT ticker FROM stocks WHERE is_active = 1 ORDER BY ticker");
 $tickerList = array_column($tickers, 'ticker');
-$tickerList[] = '^GSPC';
+// SPY (S&P 500 ETF) is used as the index benchmark.
+// ^GSPC requires a Finnhub paid subscription; SPY is available on the free tier
+// and tracks the index almost perfectly.
+if (!in_array('SPY', $tickerList)) {
+    $tickerList[] = 'SPY';
+}
 
 $total       = count($tickerList);
 $success     = 0;
@@ -40,10 +51,10 @@ $failed      = 0;
 $callCount   = 0;
 $minuteStart = microtime(true);
 
-cronLog('INFO', "Starting price update for {$total} tickers.");
+cronLog('INFO', "Starting hourly price update for {$total} tickers (run at {$hour}:00).");
 
 // ---------------------------------------------------------------------------
-// Pull prices
+// Pull prices — rate limit to 55 calls/minute
 // ---------------------------------------------------------------------------
 foreach ($tickerList as $ticker) {
     $callCount++;
@@ -70,6 +81,7 @@ foreach ($tickerList as $ticker) {
         continue;
     }
 
+    // ON DUPLICATE KEY UPDATE — safe to run multiple times per day
     $db->run(
         "INSERT INTO stock_prices (ticker, price_date, close_price)
          VALUES (?, ?, ?)
@@ -80,26 +92,25 @@ foreach ($tickerList as $ticker) {
 }
 
 // ---------------------------------------------------------------------------
-// Set SPX inception if first run
+// Set SPX inception if this is the very first price run ever
 // ---------------------------------------------------------------------------
 $inceptionDate = $db->getSetting('spx_inception_date', '');
 if (empty($inceptionDate)) {
     $spxRow = $db->fetchOne(
-        "SELECT close_price FROM stock_prices WHERE ticker = '^GSPC' ORDER BY price_date ASC LIMIT 1"
+        "SELECT close_price FROM stock_prices
+         WHERE ticker = 'SPY' ORDER BY price_date ASC LIMIT 1"
     );
     if ($spxRow) {
         $db->setSetting('spx_inception_date',  $today);
         $db->setSetting('spx_inception_price', (string)$spxRow['close_price']);
-        cronLog('INFO', "SPX inception set: {$today} @ {$spxRow['close_price']}");
+        cronLog('INFO', "SPX inception baseline set: {$today} @ {$spxRow['close_price']}");
     }
 }
 
 // ---------------------------------------------------------------------------
-// Portfolio snapshots
+// Rebuild portfolio snapshots for all users with holdings
 // ---------------------------------------------------------------------------
-require_once LIB_PATH . '/Portfolio.php';
-$portfolio = new Portfolio();
-
+$portfolio         = new Portfolio();
 $usersWithHoldings = $db->fetchAll(
     "SELECT DISTINCT user_id FROM portfolio_holdings WHERE shares > 0"
 );
@@ -115,43 +126,54 @@ foreach ($usersWithHoldings as $row) {
 }
 
 // ---------------------------------------------------------------------------
-// Refresh portfolio leaderboard
+// Refresh portfolio leaderboard cache
 // ---------------------------------------------------------------------------
 try {
     $portfolio->refreshLeaderboard();
-    cronLog('INFO', 'Portfolio leaderboard refreshed.');
 } catch (Exception $e) {
     cronLog('ERROR', 'Leaderboard refresh failed: ' . $e->getMessage());
 }
 
 // ---------------------------------------------------------------------------
-// Monthly index-beating bonus
+// Monthly index-beating bonus — only on last business day of month
 // ---------------------------------------------------------------------------
 if (isLastBusinessDayOfMonth()) {
-    $awarded = $portfolio->awardMonthlyBonuses();
-    cronLog('INFO', "Monthly bonuses awarded to {$awarded} players.");
+    // Only award once — check if already awarded today
+    $bonusLastRun = $db->getSetting('portfolio_bonus_last_awarded', '');
+    if ($bonusLastRun !== $today) {
+        $awarded = $portfolio->awardMonthlyBonuses();
+        $db->setSetting('portfolio_bonus_last_awarded', $today);
+        cronLog('INFO', "Monthly index-beating bonuses awarded to {$awarded} players.");
+    }
 }
 
 // ---------------------------------------------------------------------------
-// Generate Daily Adventurer's Brief
+// Daily brief — generate once per day after market close (5 PM+ ET / 17:00+)
+// The brief uses today's final prices so we only generate it post-close.
+// Skip if already generated today or if it's before 5 PM server time.
 // ---------------------------------------------------------------------------
-cronLog('INFO', 'Generating Daily Adventurer\'s Brief...');
-try {
-    require_once LIB_PATH . '/DailyBrief.php';
-    $brief = new DailyBrief();
-    $ok    = $brief->generate();
-    cronLog($ok ? 'INFO' : 'ERROR', $ok ? 'Daily brief generated.' : 'Daily brief generation failed.');
-} catch (Exception $e) {
-    cronLog('ERROR', 'DailyBrief exception: ' . $e->getMessage());
+$briefDate = $db->getSetting('daily_brief_date', '');
+if ($briefDate !== $today && $hour >= 17) {
+    cronLog('INFO', 'Generating Daily Adventurer\'s Brief (post-close)...');
+    try {
+        $brief = new DailyBrief();
+        $ok    = $brief->generate();
+        cronLog($ok ? 'INFO' : 'WARN', $ok
+            ? 'Daily brief generated for ' . $today
+            : 'Daily brief generation failed — will retry next hour.'
+        );
+    } catch (Exception $e) {
+        cronLog('ERROR', 'DailyBrief exception: ' . $e->getMessage());
+    }
 }
 
 // ---------------------------------------------------------------------------
-// Update timestamp + finish
+// Update timestamp
 // ---------------------------------------------------------------------------
 $db->setSetting('portfolio_last_price_update', date('Y-m-d H:i:s'));
 
 $elapsed = round(microtime(true) - $startTime, 1);
-cronLog('INFO', "Done in {$elapsed}s. Prices: {$success} ok / {$skipped} skipped / {$failed} failed. Snapshots: {$snapshots}.");
+cronLog('INFO', "Done in {$elapsed}s — prices: {$success} ok / {$skipped} zero / {$failed} failed. Snapshots: {$snapshots}.");
 
 // ---------------------------------------------------------------------------
 // HELPERS

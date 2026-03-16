@@ -65,11 +65,19 @@ ob_start();
                             <input type="hidden" name="key[]" value="<?= e($s['setting_key']) ?>">
                         </td>
                         <td>
-                            <input type="text"
-                                   name="value[]"
-                                   value="<?= e($s['setting_value']) ?>"
-                                   class="setting-input"
-                                   <?= in_array($s['setting_key'], ['finnhub_api_key']) ? 'type="password"' : '' ?>>
+                            <?php
+                                $sensitiveKeys = ['finnhub_api_key', 'claude_api_key', 'anthropic_api_key'];
+                                $isSensitive   = in_array($s['setting_key'], $sensitiveKeys);
+                                $isReadOnly    = in_array($s['setting_key'], ['env', 'spx_inception_date', 'spx_inception_price', 'daily_brief_date', 'daily_brief_generated_at', 'portfolio_last_price_update', 'portfolio_last_sp500_update', 'portfolio_bonus_last_awarded']);
+                                ?>
+                                <input <?= $isSensitive ? 'type="password"' : 'type="text"' ?>
+                                       name="value[]"
+                                       value="<?= e($s['setting_value']) ?>"
+                                       class="setting-input"
+                                       <?= $isReadOnly ? 'readonly style="opacity:0.5;cursor:not-allowed"' : '' ?>>
+                                <?php if ($isReadOnly): ?>
+                                <small class="text-muted" style="font-size:0.72rem">Auto-managed — do not edit</small>
+                                <?php endif; ?>
                         </td>
                         <td><small class="text-muted"><?= e($s['description'] ?? '') ?></small></td>
                     </tr>

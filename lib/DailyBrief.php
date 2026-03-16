@@ -37,8 +37,15 @@ Respond with EXACTLY this JSON structure and nothing else:
 PROMPT;
 
     public function __construct() {
-        $this->db         = Database::getInstance();
-        $this->apiKey     = ANTHROPIC_API_KEY;
+        $this->db = Database::getInstance();
+
+        // Claude API key: DB setting takes precedence over config.php constant
+        // This lets admins rotate the key without a file deploy
+        $dbKey = $this->db->getSetting('claude_api_key', '');
+        $this->apiKey = (!empty($dbKey) && $dbKey !== 'YOUR_KEY_HERE')
+            ? $dbKey
+            : ANTHROPIC_API_KEY;
+
         $this->finnhubKey = $this->db->getSetting('finnhub_api_key', '');
     }
 
@@ -126,7 +133,7 @@ PROMPT;
         // Get yesterday's SPX close and the day before for % change
         $spxRows = $this->db->fetchAll(
             "SELECT price_date, close_price FROM stock_prices
-             WHERE ticker = '^GSPC'
+             WHERE ticker = 'SPY'
              ORDER BY price_date DESC LIMIT 2"
         );
 
@@ -140,11 +147,11 @@ PROMPT;
 
         // Top 5 gainers and losers from latest prices vs previous day
         $latestDate = $this->db->fetchValue(
-            "SELECT MAX(price_date) FROM stock_prices WHERE ticker != '^GSPC'"
+            "SELECT MAX(price_date) FROM stock_prices WHERE ticker NOT IN ('SPY', 'LOTGD_SPX')"
         );
         $prevDate = $this->db->fetchValue(
             "SELECT MAX(price_date) FROM stock_prices
-             WHERE ticker != '^GSPC' AND price_date < ?",
+             WHERE ticker NOT IN ('SPY', 'LOTGD_SPX') AND price_date < ?",
             [$latestDate]
         );
 
@@ -159,7 +166,7 @@ PROMPT;
                         ROUND((t.close_price - p.close_price) / p.close_price * 100, 2) AS pct_change
                  FROM stock_prices t
                  JOIN stock_prices p ON p.ticker = t.ticker AND p.price_date = ?
-                 WHERE t.price_date = ? AND t.ticker != '^GSPC' AND p.close_price > 0
+                 WHERE t.price_date = ? AND t.ticker NOT IN ('SPY', 'LOTGD_SPX') AND p.close_price > 0
                  ORDER BY pct_change DESC",
                 [$prevDate, $latestDate]
             );

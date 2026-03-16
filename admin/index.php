@@ -10,10 +10,10 @@ $stats = [
     'total_users'    => (int) $db->fetchValue("SELECT COUNT(*) FROM users WHERE is_banned = 0"),
     'unconfirmed'    => (int) $db->fetchValue("SELECT COUNT(*) FROM users WHERE email_confirmed = 0"),
     'banned'         => (int) $db->fetchValue("SELECT COUNT(*) FROM users WHERE is_banned = 1"),
-    'total_entries'  => (int) $db->fetchValue("SELECT COUNT(*) FROM financial_entries"),
     'adventures'     => (int) $db->fetchValue("SELECT COUNT(*) FROM adventure_log"),
     'tavern_posts'   => (int) $db->fetchValue("SELECT COUNT(*) FROM tavern_messages WHERE is_deleted = 0"),
     'active_stocks'  => (int) $db->fetchValue("SELECT COUNT(*) FROM stocks WHERE is_active = 1"),
+    'last_brief_date'=> $db->getSetting('daily_brief_date',            'Never'),
     'last_price_run' => $db->getSetting('portfolio_last_price_update', 'Never'),
     'last_sp500_run' => $db->getSetting('portfolio_last_sp500_update', 'Never'),
 ];
@@ -36,8 +36,8 @@ ob_start();
         <div class="admin-stat"><span class="as-val"><?= num($stats['total_users']) ?></span><span class="as-label">Active Users</span></div>
         <div class="admin-stat"><span class="as-val text-red"><?= $stats['unconfirmed'] ?></span><span class="as-label">Unconfirmed</span></div>
         <div class="admin-stat"><span class="as-val text-red"><?= $stats['banned'] ?></span><span class="as-label">Banned</span></div>
-        <div class="admin-stat"><span class="as-val"><?= num($stats['total_entries']) ?></span><span class="as-label">Log Entries</span></div>
         <div class="admin-stat"><span class="as-val"><?= num($stats['adventures']) ?></span><span class="as-label">Adventures</span></div>
+        <div class="admin-stat"><span class="as-val"><?= num($stats['tavern_posts']) ?></span><span class="as-label">Tavern Posts</span></div>
         <div class="admin-stat"><span class="as-val"><?= $stats['active_stocks'] ?></span><span class="as-label">S&P Stocks</span></div>
     </div>
 
@@ -70,11 +70,21 @@ ob_start();
         <h3 class="mb-2">🕐 Cron Status</h3>
         <div class="cron-quick-row">
             <span class="text-muted">Last price update:</span>
-            <strong><?= $stats['last_price_run'] === 'Never' ? '<span class="text-red">Never</span>' : e($stats['last_price_run']) ?></strong>
+            <strong><?= $stats['last_price_run'] === 'Never'
+                ? '<span class="text-red">Never</span>'
+                : e($stats['last_price_run']) ?></strong>
+        </div>
+        <div class="cron-quick-row">
+            <span class="text-muted">Daily brief generated:</span>
+            <strong><?= $stats['last_brief_date'] === 'Never'
+                ? '<span class="text-red">Never</span>'
+                : e($stats['last_brief_date']) ?></strong>
         </div>
         <div class="cron-quick-row">
             <span class="text-muted">Last S&P 500 update:</span>
-            <strong><?= $stats['last_sp500_run'] === 'Never' ? '<span class="text-red">Never</span>' : e($stats['last_sp500_run']) ?></strong>
+            <strong><?= $stats['last_sp500_run'] === 'Never'
+                ? '<span class="text-red">Never</span>'
+                : e($stats['last_sp500_run']) ?></strong>
         </div>
     </div>
 
