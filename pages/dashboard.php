@@ -5,8 +5,10 @@
 require_once __DIR__ . '/../bootstrap.php';
 Session::requireLogin();
 
-$userModel = new User();
-$adventure = new Adventure();
+$userModel   = new User();
+$adventure   = new Adventure();
+$dailyBrief  = new DailyBrief();
+$briefHtml   = $dailyBrief->getCached();
 $userId    = Session::userId();
 $user      = $userModel->findById($userId);
 
@@ -111,12 +113,16 @@ $catIcons = [
 // =========================================================================
 $pageTitle = 'Dashboard';
 $bodyClass = 'page-dashboard';
-$extraCss  = ['dashboard.css'];
+$extraCss  = ['dashboard.css', 'brief.css'];
 
 ob_start();
 ?>
 
 <?= renderFlash() ?>
+
+<?php if ($briefHtml): ?>
+<?= $briefHtml ?>
+<?php endif; ?>
 
 <div class="dash-grid">
 

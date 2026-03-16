@@ -1,0 +1,164 @@
+/* =============================================================================
+   DAILY ADVENTURER'S BRIEF — assets/css/brief.css
+   ============================================================================= */
+
+.daily-brief-wrap {
+    background: var(--color-bg-card);
+    border: 1px solid var(--color-border-gold);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    margin-bottom: 1.5rem;
+    box-shadow: var(--shadow-gold);
+    animation: slideDown 0.35s ease;
+}
+
+@keyframes slideDown {
+    from { opacity: 0; transform: translateY(-8px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
+/* -----------------------------------------------------------------------
+   HEADER
+----------------------------------------------------------------------- */
+.brief-header {
+    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+    border-bottom: 1px solid var(--color-border-gold);
+    padding: 0.7rem 1.25rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+}
+
+.brief-header-left {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+}
+
+.brief-icon { font-size: 1rem; }
+
+.brief-title {
+    font-family: var(--font-heading);
+    font-size: 0.82rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--color-gold-light);
+}
+
+.brief-date {
+    font-family: var(--font-heading);
+    font-size: 0.72rem;
+    letter-spacing: 0.06em;
+    color: var(--color-text-muted);
+    white-space: nowrap;
+}
+
+/* -----------------------------------------------------------------------
+   BODY
+----------------------------------------------------------------------- */
+.brief-body {
+    padding: 1.25rem 1.5rem;
+}
+
+/* Market narrative text */
+.brief-market-text {
+    border-left: 2px solid var(--color-border-gold);
+    padding-left: 1rem;
+    margin-bottom: 1.25rem;
+}
+
+.brief-market-text p {
+    font-family: var(--font-body);
+    font-size: 0.98rem;
+    font-style: italic;
+    line-height: 1.7;
+    color: var(--color-text);
+    margin: 0 0 0.65rem;
+}
+
+.brief-market-text p:last-child { margin-bottom: 0; }
+
+/* Stats strip */
+.brief-stats-strip {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0.75rem;
+    margin-bottom: 1.25rem;
+}
+
+.brief-stat {
+    background: var(--color-bg-input);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius);
+    padding: 0.6rem 0.75rem;
+    text-align: center;
+}
+
+.brief-stat-label {
+    font-family: var(--font-heading);
+    font-size: 0.62rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--color-text-muted);
+    margin-bottom: 0.25rem;
+}
+
+.brief-stat-val {
+    font-family: var(--font-heading);
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: var(--color-text);
+    letter-spacing: 0.02em;
+    line-height: 1.1;
+}
+
+.brief-stat-sub {
+    font-family: var(--font-heading);
+    font-size: 0.72rem;
+    letter-spacing: 0.04em;
+    margin-top: 0.15rem;
+}
+
+.brief-green { color: var(--color-green); }
+.brief-red   { color: var(--color-red); }
+
+/* Realm section */
+.brief-realm {
+    border-top: 1px solid var(--color-border);
+    padding-top: 1.25rem;
+}
+
+.brief-realm-header {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-family: var(--font-heading);
+    font-size: 0.8rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--color-gold-light);
+    margin-bottom: 0.75rem;
+}
+
+.brief-realm p {
+    font-family: var(--font-body);
+    font-size: 0.98rem;
+    line-height: 1.7;
+    color: var(--color-text);
+    margin: 0 0 0.65rem;
+}
+
+.brief-realm p:last-child { margin-bottom: 0; }
+
+/* -----------------------------------------------------------------------
+   RESPONSIVE
+----------------------------------------------------------------------- */
+@media (max-width: 600px) {
+    .brief-body           { padding: 1rem; }
+    .brief-market-text p,
+    .brief-realm p        { font-size: 0.9rem; }
+    .brief-stats-strip    { grid-template-columns: repeat(3, 1fr); gap: 0.5rem; }
+    .brief-stat-val       { font-size: 0.95rem; }
+    .brief-date           { display: none; }
+}
