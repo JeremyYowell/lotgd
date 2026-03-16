@@ -21,32 +21,48 @@
 </head>
 <body class="<?= e($bodyClass ?? '') ?>">
 
-<nav class="site-nav">
+<nav class="site-nav" id="site-nav">
     <a href="<?= BASE_URL ?>/index.php" class="nav-brand">
         <span class="nav-brand-icon">⚔</span>
         <span class="nav-brand-text">LotGD</span>
     </a>
 
     <?php if (Session::isLoggedIn()): ?>
-    <div class="nav-links">
-        <a href="<?= BASE_URL ?>/pages/dashboard.php">Dashboard</a>
-        <a href="<?= BASE_URL ?>/pages/adventure.php">Adventure</a>
-        <a href="<?= BASE_URL ?>/pages/leaderboard.php">Leaderboard</a>
-        <a href="<?= BASE_URL ?>/pages/tavern.php">Tavern</a>
-        <a href="<?= BASE_URL ?>/pages/portfolio.php">Portfolio</a>
-        <?php if (Session::isAdmin()): ?>
-        <a href="<?= BASE_URL ?>/admin/index.php" class="nav-admin">Admin</a>
-        <?php endif; ?>
+
+    <!-- Hamburger button — visible on mobile only -->
+    <button class="nav-hamburger" id="nav-hamburger"
+            aria-label="Toggle navigation" aria-expanded="false">
+        <span></span><span></span><span></span>
+    </button>
+
+    <!-- Nav links + user — collapses on mobile -->
+    <div class="nav-collapse" id="nav-collapse">
+        <div class="nav-links">
+            <a href="<?= BASE_URL ?>/pages/dashboard.php">Dashboard</a>
+            <a href="<?= BASE_URL ?>/pages/adventure.php">Adventure</a>
+            <a href="<?= BASE_URL ?>/pages/leaderboard.php">Leaderboard</a>
+            <a href="<?= BASE_URL ?>/pages/tavern.php">Tavern</a>
+            <a href="<?= BASE_URL ?>/pages/portfolio.php">Portfolio</a>
+            <?php if (Session::isAdmin()): ?>
+            <a href="<?= BASE_URL ?>/admin/index.php" class="nav-admin">Admin</a>
+            <?php endif; ?>
+        </div>
+        <div class="nav-user">
+            <span class="nav-username"><?= e(Session::username()) ?></span>
+            <a href="<?= BASE_URL ?>/pages/logout.php" class="nav-logout">Logout</a>
+        </div>
     </div>
-    <div class="nav-user">
-        <span class="nav-username"><?= e(Session::username()) ?></span>
-        <a href="<?= BASE_URL ?>/pages/logout.php" class="nav-logout">Logout</a>
-    </div>
+
     <?php else: ?>
-    <div class="nav-links">
-        <a href="<?= BASE_URL ?>/pages/login.php">Login</a>
-        <a href="<?= BASE_URL ?>/pages/register.php" class="nav-cta">Join the Realm</a>
+
+    <!-- Guest nav — only 2 links, no hamburger needed, but wrap for consistency -->
+    <div class="nav-collapse" id="nav-collapse">
+        <div class="nav-links">
+            <a href="<?= BASE_URL ?>/pages/login.php">Login</a>
+            <a href="<?= BASE_URL ?>/pages/register.php" class="nav-cta">Join the Realm</a>
+        </div>
     </div>
+
     <?php endif; ?>
 </nav>
 
@@ -70,5 +86,38 @@
 </footer>
 
 <?= $extraScripts ?? '' ?>
+
+<script>
+// Mobile nav toggle
+const hamburger = document.getElementById('nav-hamburger');
+const collapse  = document.getElementById('nav-collapse');
+
+if (hamburger && collapse) {
+    hamburger.addEventListener('click', () => {
+        const open = collapse.classList.toggle('nav-open');
+        hamburger.classList.toggle('is-open', open);
+        hamburger.setAttribute('aria-expanded', open);
+    });
+
+    // Close menu when a link is tapped
+    collapse.querySelectorAll('a').forEach(link => {
+        link.addEventListener('click', () => {
+            collapse.classList.remove('nav-open');
+            hamburger.classList.remove('is-open');
+            hamburger.setAttribute('aria-expanded', 'false');
+        });
+    });
+
+    // Close menu when tapping outside
+    document.addEventListener('click', (e) => {
+        if (!e.target.closest('#site-nav')) {
+            collapse.classList.remove('nav-open');
+            hamburger.classList.remove('is-open');
+            hamburger.setAttribute('aria-expanded', 'false');
+        }
+    });
+}
+</script>
+
 </body>
 </html>
