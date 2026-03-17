@@ -24,7 +24,6 @@ require_once __DIR__ . '/../bootstrap.php';
 
 $apiKey    = $db->getSetting('finnhub_api_key');
 $today     = date('Y-m-d');
-$hour      = (int)date('G');  // 0-23
 $startTime = microtime(true);
 
 if (!$apiKey || $apiKey === 'YOUR_KEY_HERE') {
@@ -144,26 +143,6 @@ if (isLastBusinessDayOfMonth()) {
         $awarded = $portfolio->awardMonthlyBonuses();
         $db->setSetting('portfolio_bonus_last_awarded', $today);
         cronLog('INFO', "Monthly index-beating bonuses awarded to {$awarded} players.");
-    }
-}
-
-// ---------------------------------------------------------------------------
-// Daily brief — generate once per day after market close (5 PM+ ET / 17:00+)
-// The brief uses today's final prices so we only generate it post-close.
-// Skip if already generated today or if it's before 5 PM server time.
-// ---------------------------------------------------------------------------
-$briefDate = $db->getSetting('daily_brief_date', '');
-if ($briefDate !== $today && $hour >= 17) {
-    cronLog('INFO', 'Generating Daily Adventurer\'s Brief (post-close)...');
-    try {
-        $brief = new DailyBrief();
-        $ok    = $brief->generate();
-        cronLog($ok ? 'INFO' : 'WARN', $ok
-            ? 'Daily brief generated for ' . $today
-            : 'Daily brief generation failed — will retry next hour.'
-        );
-    } catch (Exception $e) {
-        cronLog('ERROR', 'DailyBrief exception: ' . $e->getMessage());
     }
 }
 
