@@ -1,6 +1,26 @@
 <?php
 /**
  * pages/adventure.php — Go Adventuring
+ *
+ * Architecture: Database-backed adventure sessions.
+ *
+ * State is stored in the adventure_sessions table (one row per user,
+ * upserted on each transition). This eliminates all PHP session timing
+ * issues — MySQL writes are synchronous and durable.
+ *
+ * Action consumption rules:
+ *  - Action is consumed when the player SUBMITS A CHOICE, not when
+ *    the scenario is shown. This means browsing to /adventure.php or
+ *    refreshing the scenario screen never costs an action.
+ *  - If the player refreshes the result screen, no second action is spent.
+ *  - If the player navigates away mid-scenario and comes back, their
+ *    scenario is still waiting for them with no action spent yet.
+ *
+ * State machine:
+ *  idle     → (start POST)   → scenario   [no action spent yet]
+ *  scenario → (choose POST)  → result     [action spent HERE]
+ *  result   → (continue POST)→ scenario   [action spent on next choose]
+ *  result   → (done POST)    → idle + dashboard redirect
  */
 require_once __DIR__ . '/../bootstrap.php';
 Session::requireLogin();
@@ -11,33 +31,61 @@ $userId    = Session::userId();
 $user      = $userModel->findById($userId);
 
 // =========================================================================
-// STATE MACHINE
-// States: 'idle' | 'scenario' | 'result'
-// Stored in session to survive the POST-redirect-GET cycle.
+// LOAD CURRENT DB SESSION
 // =========================================================================
-$state = Session::get('adv_state', 'idle');
 
-// Result is stored in session after a POST so we can display it after redirect
-$result   = Session::get('adv_result',   null);
-$scenario = Session::get('adv_scenario', null);
-$choices  = Session::get('adv_choices',  null);
-
-// Guard: if state/data are out of sync (e.g. pickScenario returned false
-// because the scenario pool was exhausted, or session expired mid-adventure)
-// reset cleanly to idle rather than rendering a blank page.
-if ($state === 'scenario' && (empty($scenario) || empty($choices))) {
-    Session::set('adv_state', 'idle');
-    Session::delete('adv_scenario');
-    Session::delete('adv_choices');
-    $state    = 'idle';
-    $scenario = null;
-    $choices  = null;
+/**
+ * Get the current adventure session row for this user, or null if none.
+ */
+function getAdvSession(int $userId): ?array {
+    global $db;
+    $row = $db->fetchOne(
+        "SELECT * FROM adventure_sessions WHERE user_id = ?",
+        [$userId]
+    );
+    return $row ?: null;
 }
-if ($state === 'result' && empty($result)) {
-    Session::set('adv_state', 'idle');
-    Session::delete('adv_result');
-    $state  = 'idle';
-    $result = null;
+
+/**
+ * Save a new scenario to the DB session (upsert).
+ * Does NOT consume an action.
+ */
+function saveScenarioSession(int $userId, array $scenario, array $choices): void {
+    global $db;
+    $db->run(
+        "INSERT INTO adventure_sessions
+             (user_id, state, scenario_id, choices_json, result_json, action_consumed)
+         VALUES (?, 'scenario', ?, ?, NULL, 0)
+         ON DUPLICATE KEY UPDATE
+             state           = 'scenario',
+             scenario_id     = VALUES(scenario_id),
+             choices_json    = VALUES(choices_json),
+             result_json     = NULL,
+             action_consumed = 0,
+             updated_at      = NOW()",
+        [$userId, $scenario['id'], json_encode($choices)]
+    );
+}
+
+/**
+ * Save the result and mark action as consumed.
+ */
+function saveResultSession(int $userId, array $result): void {
+    global $db;
+    $db->run(
+        "UPDATE adventure_sessions
+         SET state = 'result', result_json = ?, action_consumed = 1, updated_at = NOW()
+         WHERE user_id = ?",
+        [json_encode($result), $userId]
+    );
+}
+
+/**
+ * Clear the session row entirely (done adventuring).
+ */
+function clearAdvSession(int $userId): void {
+    global $db;
+    $db->run("DELETE FROM adventure_sessions WHERE user_id = ?", [$userId]);
 }
 
 // =========================================================================
@@ -47,83 +95,179 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     Session::verifyCsrfPost();
     $action = $_POST['action'] ?? '';
 
-    // --- START: spend an action, pick a scenario ---
+    // ------------------------------------------------------------------
+    // START — pick a scenario, save to DB, show it (no action consumed)
+    // ------------------------------------------------------------------
     if ($action === 'start') {
         $dailyState = $userModel->getDailyState($userId);
 
         if ($dailyState['actions_remaining'] <= 0) {
-            Session::setFlash('error', 'You have no actions remaining today. Return at dawn.');
+            Session::setFlash('error', 'No actions remaining today. Return at dawn.');
             redirect('/pages/adventure.php');
         }
 
         $scenarioRow = $adventure->pickScenario($userId, (int)$user['level']);
 
         if (!$scenarioRow) {
-            Session::setFlash('error', 'No adventures are available for your level right now.');
+            Session::setFlash('info', 'No adventures available for your level right now.');
             redirect('/pages/adventure.php');
         }
 
         $choiceRows = $adventure->getChoices((int)$scenarioRow['id']);
+        saveScenarioSession($userId, $scenarioRow, $choiceRows);
 
-        // Consume the action NOW — even if they close the window
-        $userModel->consumeAction($userId);
-
-        Session::set('adv_state',    'scenario');
-        Session::set('adv_scenario', $scenarioRow);
-        Session::set('adv_choices',  $choiceRows);
-        Session::delete('adv_result');
-
+        // Redirect to GET so refresh doesn't re-POST
         redirect('/pages/adventure.php');
     }
 
-    // --- CHOOSE: player picks an option ---
-    if ($action === 'choose' && $state === 'scenario') {
-        $choiceId = (int)($_POST['choice_id'] ?? 0);
+    // ------------------------------------------------------------------
+    // CHOOSE — execute, consume action, save result to DB
+    // ------------------------------------------------------------------
+    if ($action === 'choose') {
+        $choiceId   = (int)($_POST['choice_id'] ?? 0);
+        $advSession = getAdvSession($userId);
 
-        if (!$choiceId) {
-            Session::setFlash('error', 'Please select a choice.');
+        if (!$advSession || $advSession['state'] !== 'scenario') {
+            Session::setFlash('error', 'No active adventure. Please start a new one.');
+            clearAdvSession($userId);
             redirect('/pages/adventure.php');
         }
 
-        // Validate choice belongs to current scenario
-        $validIds = array_column($choices ?? [], 'id');
-        if (!in_array($choiceId, $validIds)) {
-            Session::setFlash('error', 'Invalid choice.');
-            Session::set('adv_state', 'idle');
+        // Validate choice belongs to this scenario
+        $savedChoices = json_decode($advSession['choices_json'], true) ?? [];
+        $validIds     = array_column($savedChoices, 'id');
+
+        if (!$choiceId || !in_array($choiceId, $validIds)) {
+            Session::setFlash('error', 'Invalid choice. Please try again.');
             redirect('/pages/adventure.php');
         }
 
-        $freshUser = $userModel->findById($userId);
-        $result    = $adventure->execute($userId, $choiceId, $freshUser);
-
-        if (!$result['success']) {
-            Session::setFlash('error', $result['error']);
-            Session::set('adv_state', 'idle');
+        // Idempotency guard: if action already consumed for this session
+        // (e.g. double-submit or back button), skip to showing result
+        if ((int)$advSession['action_consumed'] === 1 && $advSession['result_json']) {
             redirect('/pages/adventure.php');
         }
 
-        Session::set('adv_state',  'result');
-        Session::set('adv_result', $result);
+        // Check actions before spending one
+        $dailyState = $userModel->getDailyState($userId);
+        if ($dailyState['actions_remaining'] <= 0) {
+            clearAdvSession($userId);
+            Session::setFlash('error', 'No actions remaining today.');
+            redirect('/pages/adventure.php');
+        }
 
+        // Execute the adventure
+        $freshUser  = $userModel->findById($userId);
+        $execResult = $adventure->execute($userId, $choiceId, $freshUser);
+
+        if (!$execResult['success']) {
+            Session::setFlash('error', $execResult['error'] ?? 'Something went wrong.');
+            clearAdvSession($userId);
+            redirect('/pages/adventure.php');
+        }
+
+        // Consume action and save result in a single transaction.
+        // If saveResultSession fails, consumeAction is rolled back — no action lost.
+        $db->beginTransaction();
+        try {
+            $userModel->consumeAction($userId);
+            saveResultSession($userId, $execResult);
+            $db->commit();
+        } catch (Exception $e) {
+            $db->rollBack();
+            appLog('error', 'Adventure result save failed', ['error' => $e->getMessage()]);
+            Session::setFlash('error', 'Something went wrong saving your result. Your action was not spent. Please try again.');
+            redirect('/pages/adventure.php');
+        }
+
+        // Redirect to GET — refresh shows result without re-executing
         redirect('/pages/adventure.php');
     }
 
-    // --- CONTINUE: reset state, go again or return ---
+    // ------------------------------------------------------------------
+    // CONTINUE — pick next scenario (no action consumed yet)
+    // ------------------------------------------------------------------
     if ($action === 'continue') {
-        Session::set('adv_state', 'idle');
-        Session::delete('adv_result');
-        Session::delete('adv_scenario');
-        Session::delete('adv_choices');
+        $dailyState = $userModel->getDailyState($userId);
+
+        if ($dailyState['actions_remaining'] <= 0) {
+            clearAdvSession($userId);
+            redirect('/pages/adventure.php');
+        }
+
+        $freshUser   = $userModel->findById($userId);
+        $scenarioRow = $adventure->pickScenario($userId, (int)$freshUser['level']);
+
+        if (!$scenarioRow) {
+            clearAdvSession($userId);
+            Session::setFlash('info', 'No new adventures available right now.');
+            redirect('/pages/adventure.php');
+        }
+
+        $choiceRows = $adventure->getChoices((int)$scenarioRow['id']);
+        saveScenarioSession($userId, $scenarioRow, $choiceRows);
+
         redirect('/pages/adventure.php');
+    }
+
+    // ------------------------------------------------------------------
+    // DONE — clear session, go to dashboard
+    // ------------------------------------------------------------------
+    if ($action === 'done') {
+        clearAdvSession($userId);
+        redirect('/pages/dashboard.php');
+    }
+}
+
+// =========================================================================
+// DETERMINE RENDER STATE FROM DB
+// =========================================================================
+$advSession = getAdvSession($userId);
+$state      = 'idle';
+$scenario   = null;
+$choices    = null;
+$result     = null;
+
+if ($advSession) {
+    if ($advSession['state'] === 'scenario') {
+        // Re-fetch scenario from DB to ensure fresh data
+        $scenarioRow = $db->fetchOne(
+            "SELECT * FROM adventure_scenarios WHERE id = ? AND is_active = 1",
+            [$advSession['scenario_id']]
+        );
+        $choiceRows = json_decode($advSession['choices_json'], true) ?? [];
+
+        if ($scenarioRow && !empty($choiceRows)) {
+            $state    = 'scenario';
+            $scenario = $scenarioRow;
+            $choices  = $choiceRows;
+        } else {
+            // Scenario was deactivated or data corrupt — clear and go idle
+            clearAdvSession($userId);
+        }
+    } elseif ($advSession['state'] === 'result' && $advSession['result_json']) {
+        $resultData = json_decode($advSession['result_json'], true);
+        if ($resultData) {
+            $state  = 'result';
+            $result = $resultData;
+            // Refresh user after XP/gold changes
+            $user = $userModel->findById($userId);
+        } else {
+            clearAdvSession($userId);
+        }
     }
 }
 
 // =========================================================================
 // DATA
 // =========================================================================
-$dailyState   = $userModel->getDailyState($userId);
-$recentLog    = $adventure->getRecentLog($userId, 8);
-$user         = $userModel->findById($userId); // refresh after possible XP/gold changes
+$dailyState  = $userModel->getDailyState($userId);
+$actionLimit = (int)$db->getSetting('daily_action_limit', 10);
+
+$recentLog = [];
+if ($state === 'idle') {
+    $recentLog = $adventure->getRecentLog($userId, 8);
+}
 
 $categoryMeta = [
     'shopping'   => ['icon' => '🛒', 'label' => 'Shopping',   'color' => '#ec4899'],
@@ -153,7 +297,6 @@ ob_start();
 
 <div class="adv-wrap">
 
-    <!-- HEADER -->
     <div class="adv-header">
         <div>
             <h1>⚔ Go Adventuring</h1>
@@ -162,7 +305,7 @@ ob_start();
         <div class="adv-actions-badge">
             <span class="adv-actions-label">Actions Today</span>
             <span class="adv-actions-val <?= $dailyState['actions_remaining'] <= 0 ? 'text-red' : 'text-gold' ?>">
-                <?= $dailyState['actions_remaining'] ?> / <?= $db->getSetting('daily_action_limit', 10) ?>
+                <?= $dailyState['actions_remaining'] ?> / <?= $actionLimit ?>
             </span>
         </div>
     </div>
@@ -171,16 +314,33 @@ ob_start();
 
     <?php if ($state === 'idle'): ?>
     <!-- =====================================================
-         IDLE STATE — Ready to adventure
+         IDLE — ready to adventure or exhausted
     ===================================================== -->
     <div class="adv-layout">
         <div class="adv-main">
-
             <div class="card adv-ready-card <?= $dailyState['actions_remaining'] <= 0 ? 'adv-exhausted' : '' ?>">
-                <?php if ($dailyState['actions_remaining'] <= 0): ?>
+                <?php if ($dailyState['actions_remaining'] <= 0):
+                    // Calculate seconds until midnight (when actions reset)
+                    $now             = new DateTime();
+                    $midnight        = new DateTime('tomorrow midnight');
+                    $secsUntilReset  = $midnight->getTimestamp() - $now->getTimestamp();
+                    $hoursLeft       = floor($secsUntilReset / 3600);
+                    $minsLeft        = floor(($secsUntilReset % 3600) / 60);
+                ?>
                     <div class="adv-rest-icon">🌙</div>
                     <h2 class="text-muted">You are weary, adventurer.</h2>
                     <p class="text-muted">You have spent all your actions for today. The tavern awaits. Return at dawn.</p>
+                    <div style="margin-top:1.25rem;padding:0.85rem 1rem;background:var(--color-bg-input);
+                                border:1px solid var(--color-border);border-radius:var(--radius);text-align:center">
+                        <span class="text-muted" style="font-size:0.8rem;font-family:var(--font-heading);
+                              letter-spacing:0.08em;text-transform:uppercase">Actions reset in</span>
+                        <div id="adv-countdown"
+                             style="font-family:var(--font-display);font-size:2rem;color:var(--color-gold-light);
+                                    letter-spacing:0.08em;margin:0.25rem 0;line-height:1">
+                            <?= str_pad($hoursLeft, 2, '0', STR_PAD_LEFT) ?>:<?= str_pad($minsLeft, 2, '0', STR_PAD_LEFT) ?>:<span id="adv-secs">00</span>
+                        </div>
+                        <span class="text-muted" style="font-size:0.75rem">hours : minutes : seconds</span>
+                    </div>
                 <?php else: ?>
                     <div class="adv-ready-icon">⚔️</div>
                     <h2>Ready for Adventure?</h2>
@@ -209,17 +369,15 @@ ob_start();
                     </form>
                 <?php endif; ?>
             </div>
-
         </div>
 
-        <!-- RECENT LOG -->
         <div class="adv-sidebar">
             <?php if (!empty($recentLog)): ?>
             <div class="card adv-log-card">
                 <h3 class="mb-3">📜 Recent Adventures</h3>
                 <div class="adv-log-list">
                     <?php foreach ($recentLog as $entry):
-                        $ol = $outcomeLabels[$entry['outcome']] ?? $outcomeLabels['failure'];
+                        $ol      = $outcomeLabels[$entry['outcome']] ?? $outcomeLabels['failure'];
                         $catIcon = $categoryMeta[$entry['category'] ?? 'daily_life']['icon'] ?? '⚔';
                     ?>
                     <div class="adv-log-row">
@@ -245,9 +403,17 @@ ob_start();
 
     <?php elseif ($state === 'scenario' && $scenario && $choices): ?>
     <!-- =====================================================
-         SCENARIO STATE — Show encounter + choices
+         SCENARIO — show encounter + choices
+         Action has NOT been consumed yet at this point.
     ===================================================== -->
-    <?php $cat = $categoryMeta[$scenario['category']] ?? $categoryMeta['daily_life']; ?>
+    <?php
+    $storeObj  = new Store();
+    $itemBonus = $storeObj->getRollBonus($userId, $scenario['category']);
+    $totalMod  = $adventure->calculateModifier(
+        (int)$user['level'], $user['class'], $scenario['category'], $itemBonus
+    );
+    $cat = $categoryMeta[$scenario['category']] ?? $categoryMeta['daily_life'];
+    ?>
     <div class="adv-encounter">
 
         <div class="encounter-category">
@@ -261,36 +427,10 @@ ob_start();
         <p class="encounter-flavor">"<?= e($scenario['flavor_text']) ?>"</p>
         <?php endif; ?>
 
-        <div class="encounter-description">
-            <?= nl2br(e($scenario['description'])) ?>
-        </div>
+        <p class="encounter-desc"><?= nl2br(e($scenario['description'])) ?></p>
 
-        <div class="encounter-choices">
-            <h3 class="choices-heading">What do you do?</h3>
-            <?php foreach ($choices as $choice): ?>
-            <form method="POST" class="choice-form">
-                <?= Session::csrfField() ?>
-                <input type="hidden" name="action"    value="choose">
-                <input type="hidden" name="choice_id" value="<?= $choice['id'] ?>">
-                <button type="submit" class="choice-btn">
-                    <span class="choice-text"><?= e($choice['choice_text']) ?></span>
-                    <?php if ($choice['hint_text']): ?>
-                    <span class="choice-hint"><?= e($choice['hint_text']) ?></span>
-                    <?php endif; ?>
-                </button>
-            </form>
-            <?php endforeach; ?>
-        </div>
-
-        <?php
-        $store       = new Store();
-        $itemBonus   = $store->getRollBonus($userId, $scenario['category']);
-        $totalMod    = $adventure->calculateModifier(
-            (int)$user['level'], $user['class'], $scenario['category'], $itemBonus
-        );
-        ?>
         <div class="encounter-modifier-hint">
-            Your modifier today: <strong class="text-gold">+<?= $totalMod ?></strong>
+            Your modifier: <strong class="text-gold">+<?= $totalMod ?></strong>
             (Level <?= $user['level'] ?>
             <?php if ($itemBonus > 0): ?>
                 + class + <span style="color:#fbbf24">+<?= $itemBonus ?> gear</span>
@@ -299,11 +439,33 @@ ob_start();
             <?php endif; ?>)
         </div>
 
+        <div class="encounter-choices">
+            <?php foreach ($choices as $choice): ?>
+            <form method="POST" class="choice-form">
+                <?= Session::csrfField() ?>
+                <input type="hidden" name="action"    value="choose">
+                <input type="hidden" name="choice_id" value="<?= (int)$choice['id'] ?>">
+                <button type="submit" class="choice-btn">
+                    <span class="choice-text"><?= e($choice['choice_text']) ?></span>
+                    <?php if (!empty($choice['hint_text'])): ?>
+                    <span class="choice-hint"><?= e($choice['hint_text']) ?></span>
+                    <?php endif; ?>
+                    <span class="choice-dc text-muted">DC <?= $choice['difficulty'] ?></span>
+                </button>
+            </form>
+            <?php endforeach; ?>
+        </div>
+
+        <p class="text-muted" style="font-size:0.78rem;margin-top:1.5rem;text-align:center">
+            ⚠ Choosing an option will use one of your daily actions
+            (<?= $dailyState['actions_remaining'] ?> remaining)
+        </p>
+
     </div>
 
     <?php elseif ($state === 'result' && $result): ?>
     <!-- =====================================================
-         RESULT STATE — Show roll result + narrative
+         RESULT — outcome, roll, narrative, rewards
     ===================================================== -->
     <?php $ol = $outcomeLabels[$result['outcome']] ?? $outcomeLabels['failure']; ?>
     <div class="adv-result <?= $result['outcome'] ?>-result">
@@ -315,7 +477,6 @@ ob_start();
         <h2 class="result-scenario-title"><?= e($result['scenario_title']) ?></h2>
         <p class="result-choice-echo text-muted">You chose: <em><?= e($result['choice_text']) ?></em></p>
 
-        <!-- Roll display -->
         <div class="result-roll-display">
             <div class="roll-die">
                 <span class="roll-number"><?= $result['final_roll'] ?></span>
@@ -328,12 +489,10 @@ ob_start();
             </div>
         </div>
 
-        <!-- Narrative -->
         <div class="result-narrative">
             <?= nl2br(e($result['narrative'])) ?>
         </div>
 
-        <!-- Rewards -->
         <div class="result-rewards">
             <?php if ($result['xp'] > 0): ?>
                 <span class="reward-badge xp-badge">+<?= num($result['xp']) ?> XP</span>
@@ -351,22 +510,35 @@ ob_start();
                 </span>
             <?php endif; ?>
 
-            <?php if ($result['leveled_up']): ?>
+            <?php if ($result['leveled_up'] ?? false): ?>
                 <span class="reward-badge level-badge">🎉 LEVEL UP → <?= $result['new_level'] ?>!</span>
             <?php endif; ?>
         </div>
 
-        <!-- Continue -->
-        <form method="POST" class="mt-3">
-            <?= Session::csrfField() ?>
-            <input type="hidden" name="action" value="continue">
-            <button type="submit" class="btn btn-primary">
-                <?= $dailyState['actions_remaining'] > 0 ? '⚔ Adventure Again' : '🌙 Rest for the Night' ?>
-            </button>
-            <a href="<?= BASE_URL ?>/pages/dashboard.php" class="btn btn-secondary" style="margin-left:0.5rem">
-                Return to Dashboard
+        <div class="result-actions mt-3">
+            <?php if ($dailyState['actions_remaining'] > 0): ?>
+                <form method="POST" style="display:inline">
+                    <?= Session::csrfField() ?>
+                    <input type="hidden" name="action" value="continue">
+                    <button type="submit" class="btn btn-primary">
+                        ⚔ Next Adventure
+                        <span style="font-size:0.78rem;opacity:0.8;margin-left:0.35rem">
+                            (<?= $dailyState['actions_remaining'] ?> remaining)
+                        </span>
+                    </button>
+                </form>
+            <?php else: ?>
+                <form method="POST" style="display:inline">
+                    <?= Session::csrfField() ?>
+                    <input type="hidden" name="action" value="done">
+                    <button type="submit" class="btn btn-secondary">🌙 Rest for the Night</button>
+                </form>
+            <?php endif; ?>
+            <a href="<?= BASE_URL ?>/pages/dashboard.php"
+               class="btn btn-secondary" style="margin-left:0.5rem">
+                Dashboard
             </a>
-        </form>
+        </div>
 
     </div>
 
@@ -376,5 +548,35 @@ ob_start();
 
 <?php
 $pageContent = ob_get_clean();
+
+// Countdown JS — only needed when exhausted
+if ($state === 'idle' && $dailyState['actions_remaining'] <= 0) {
+    $extraScripts = '<script>
+(function() {
+    var secsLeft = ' . $secsUntilReset . ';
+    var el = document.getElementById("adv-secs");
+    var cd = document.getElementById("adv-countdown");
+    if (!el) return;
+    function tick() {
+        if (secsLeft <= 0) {
+            if (cd) cd.innerHTML = "00:00:00";
+            setTimeout(function(){ location.reload(); }, 1000);
+            return;
+        }
+        secsLeft--;
+        var h = Math.floor(secsLeft / 3600);
+        var m = Math.floor((secsLeft % 3600) / 60);
+        var s = secsLeft % 60;
+        if (cd) cd.innerHTML =
+            String(h).padStart(2,"0") + ":" +
+            String(m).padStart(2,"0") + ":" +
+            String(s).padStart(2,"0");
+        setTimeout(tick, 1000);
+    }
+    setTimeout(tick, 1000);
+})();
+</script>';
+}
+
 require TPL_PATH . '/layout.php';
 ?>
