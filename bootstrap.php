@@ -3,6 +3,9 @@
  * bootstrap.php — Application entry point
  */
 
+if (!file_exists(__DIR__ . '/config/config.php')) {
+    header('Location: /setup/'); exit;
+}
 require_once __DIR__ . '/config/config.php';
 
 spl_autoload_register(function (string $class): void {
