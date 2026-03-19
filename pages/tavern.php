@@ -205,9 +205,10 @@ ob_start();
                     <div class="message-header">
                         <span class="msg-avatar"><?= $classIcons[$msg['class']] ?? '⚔️' ?></span>
                         <div class="msg-meta">
-                            <span class="msg-username <?= $msg['user_id'] == $userId ? 'msg-me' : '' ?>">
+                            <a href="<?= BASE_URL ?>/pages/profile.php?user=<?= urlencode($msg['username']) ?>"
+                               class="msg-username <?= $msg['user_id'] == $userId ? 'msg-me' : '' ?>">
                                 <?= e($msg['username']) ?>
-                            </span>
+                            </a>
                             <span class="msg-level text-muted">Lvl <?= $msg['level'] ?></span>
                         </div>
                         <span class="msg-time text-muted"><?= timeAgo($msg['posted_at']) ?></span>
@@ -242,9 +243,10 @@ ob_start();
                     <div class="message-header">
                         <span class="msg-avatar"><?= $classIcons[$msg['class']] ?? '⚔️' ?></span>
                         <div class="msg-meta">
-                            <span class="msg-username <?= $isOwn ? 'msg-me' : '' ?>">
+                            <a href="<?= BASE_URL ?>/pages/profile.php?user=<?= urlencode($msg['username']) ?>"
+                               class="msg-username <?= $isOwn ? 'msg-me' : '' ?>">
                                 <?= e($msg['username']) ?>
-                            </span>
+                            </a>
                             <span class="msg-level text-muted">Lvl <?= $msg['level'] ?></span>
                         </div>
                         <span class="msg-time text-muted"><?= timeAgo($msg['posted_at']) ?></span>
@@ -379,7 +381,7 @@ ob_start();
                     <?php foreach ($topToday as $tp): ?>
                     <div class="active-row">
                         <span><?= $classIcons[$tp['class']] ?? '⚔️' ?></span>
-                        <span class="active-name"><?= e($tp['username']) ?></span>
+                        <a href="<?= BASE_URL ?>/pages/profile.php?user=<?= urlencode($tp['username']) ?>" class="active-name"><?= e($tp['username']) ?></a>
                         <span class="active-posts text-muted"><?= $tp['posts'] ?> post<?= $tp['posts'] != 1 ? 's' : '' ?></span>
                     </div>
                     <?php endforeach; ?>
