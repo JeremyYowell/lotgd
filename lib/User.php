@@ -7,8 +7,18 @@ class User {
 
     private Database $db;
 
-    private const BASE_XP        = 1000;
-    private const LEVEL_EXPONENT = 1.5;
+    private const BASE_XP        = 250;
+    private const LEVEL_EXPONENT = 1.8;
+
+    // HP per level: base 20 + (level-1) * 2
+    public static function maxHpForLevel(int $level): int {
+        return 20 + (max(1, $level) - 1) * 2;
+    }
+
+    // Gold reward for reaching a new level
+    public static function goldRewardForLevel(int $level): int {
+        return $level * 50;
+    }
 
     public function __construct() {
         $this->db = Database::getInstance();
@@ -121,9 +131,11 @@ class User {
         $level     = (int) $user['level'];
         $leveledUp = false;
 
+        $goldAwarded = 0;
         while ($level < $maxLevel && $newXp >= $this->xpForLevel($level + 1)) {
             $level++;
-            $leveledUp = true;
+            $leveledUp   = true;
+            $goldAwarded += self::goldRewardForLevel($level);
         }
 
         $xpToNext = $this->xpForLevel($level + 1);
@@ -134,11 +146,27 @@ class User {
         );
 
         if ($leveledUp) {
+            // Award Gold bonus for leveling up
+            if ($goldAwarded > 0) {
+                $this->db->run(
+                    "UPDATE users SET gold = gold + ? WHERE id = ?",
+                    [$goldAwarded, $userId]
+                );
+            }
             $this->checkLevelAchievements($userId, $level);
-            appLog('info', 'User leveled up', ['user_id' => $userId, 'new_level' => $level]);
+            appLog('info', 'User leveled up', [
+                'user_id'   => $userId,
+                'new_level' => $level,
+                'gold'      => $goldAwarded,
+            ]);
         }
 
-        return ['xp_gained' => $xp, 'leveled_up' => $leveledUp, 'new_level' => $level];
+        return [
+            'xp_gained'    => $xp,
+            'leveled_up'   => $leveledUp,
+            'new_level'    => $level,
+            'gold_awarded' => $goldAwarded,
+        ];
     }
 
     public function xpForLevel(int $level): int {

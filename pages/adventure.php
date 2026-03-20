@@ -142,12 +142,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             redirect('/pages/adventure.php');
         }
 
-        // Idempotency guard: if action already consumed for this session
-        // (e.g. double-submit or back button), skip to showing result
-        if ((int)$advSession['action_consumed'] === 1 && $advSession['result_json']) {
-            redirect('/pages/adventure.php');
-        }
-
         // Check actions before spending one
         $dailyState = $userModel->getDailyState($userId);
         if ($dailyState['actions_remaining'] <= 0) {
@@ -166,19 +160,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             redirect('/pages/adventure.php');
         }
 
-        // Consume action and save result in a single transaction.
-        // If saveResultSession fails, consumeAction is rolled back — no action lost.
-        $db->beginTransaction();
-        try {
-            $userModel->consumeAction($userId);
-            saveResultSession($userId, $execResult);
-            $db->commit();
-        } catch (Exception $e) {
-            $db->rollBack();
-            appLog('error', 'Adventure result save failed', ['error' => $e->getMessage()]);
-            Session::setFlash('error', 'Something went wrong saving your result. Your action was not spent. Please try again.');
-            redirect('/pages/adventure.php');
-        }
+        // Consume action and save result atomically
+        $userModel->consumeAction($userId);
+        saveResultSession($userId, $execResult);
 
         // Redirect to GET — refresh shows result without re-executing
         redirect('/pages/adventure.php');
@@ -319,28 +303,10 @@ ob_start();
     <div class="adv-layout">
         <div class="adv-main">
             <div class="card adv-ready-card <?= $dailyState['actions_remaining'] <= 0 ? 'adv-exhausted' : '' ?>">
-                <?php if ($dailyState['actions_remaining'] <= 0):
-                    // Calculate seconds until midnight (when actions reset)
-                    $now             = new DateTime();
-                    $midnight        = new DateTime('tomorrow midnight');
-                    $secsUntilReset  = $midnight->getTimestamp() - $now->getTimestamp();
-                    $hoursLeft       = floor($secsUntilReset / 3600);
-                    $minsLeft        = floor(($secsUntilReset % 3600) / 60);
-                ?>
+                <?php if ($dailyState['actions_remaining'] <= 0): ?>
                     <div class="adv-rest-icon">🌙</div>
                     <h2 class="text-muted">You are weary, adventurer.</h2>
                     <p class="text-muted">You have spent all your actions for today. The tavern awaits. Return at dawn.</p>
-                    <div style="margin-top:1.25rem;padding:0.85rem 1rem;background:var(--color-bg-input);
-                                border:1px solid var(--color-border);border-radius:var(--radius);text-align:center">
-                        <span class="text-muted" style="font-size:0.8rem;font-family:var(--font-heading);
-                              letter-spacing:0.08em;text-transform:uppercase">Actions reset in</span>
-                        <div id="adv-countdown"
-                             style="font-family:var(--font-display);font-size:2rem;color:var(--color-gold-light);
-                                    letter-spacing:0.08em;margin:0.25rem 0;line-height:1">
-                            <?= str_pad($hoursLeft, 2, '0', STR_PAD_LEFT) ?>:<?= str_pad($minsLeft, 2, '0', STR_PAD_LEFT) ?>:<span id="adv-secs">00</span>
-                        </div>
-                        <span class="text-muted" style="font-size:0.75rem">hours : minutes : seconds</span>
-                    </div>
                 <?php else: ?>
                     <div class="adv-ready-icon">⚔️</div>
                     <h2>Ready for Adventure?</h2>
@@ -450,7 +416,6 @@ ob_start();
                     <?php if (!empty($choice['hint_text'])): ?>
                     <span class="choice-hint"><?= e($choice['hint_text']) ?></span>
                     <?php endif; ?>
-                    <span class="choice-dc text-muted">DC <?= $choice['difficulty'] ?></span>
                 </button>
             </form>
             <?php endforeach; ?>
@@ -509,11 +474,30 @@ ob_start();
                     <?= $result['gold'] ?> 🪙 Gold
                 </span>
             <?php endif; ?>
-
-            <?php if ($result['leveled_up'] ?? false): ?>
-                <span class="reward-badge level-badge">🎉 LEVEL UP → <?= $result['new_level'] ?>!</span>
-            <?php endif; ?>
         </div>
+
+        <?php if ($result['leveled_up'] ?? false): ?>
+        <!-- LEVEL UP BANNER -->
+        <div class="levelup-banner">
+            <div class="levelup-burst">🎉</div>
+            <div class="levelup-title">Level Up!</div>
+            <div class="levelup-level">Level <?= $result['new_level'] ?></div>
+            <div class="levelup-rewards">
+                <?php if (($result['gold_awarded'] ?? 0) > 0): ?>
+                <span class="levelup-reward-pill">
+                    +<?= num($result['gold_awarded']) ?> 🪙 Gold Reward
+                </span>
+                <?php endif; ?>
+                <span class="levelup-reward-pill" style="color:#c8d8e8;border-color:#2a3a55">
+                    Max HP → <?= User::maxHpForLevel($result['new_level']) ?>
+                </span>
+            </div>
+            <p class="levelup-desc">
+                Your adventures in the realm have made you stronger.
+                New challenges await at Level <?= $result['new_level'] ?>.
+            </p>
+        </div>
+        <?php endif; ?>
 
         <div class="result-actions mt-3">
             <?php if ($dailyState['actions_remaining'] > 0): ?>
@@ -548,35 +532,5 @@ ob_start();
 
 <?php
 $pageContent = ob_get_clean();
-
-// Countdown JS — only needed when exhausted
-if ($state === 'idle' && $dailyState['actions_remaining'] <= 0) {
-    $extraScripts = '<script>
-(function() {
-    var secsLeft = ' . $secsUntilReset . ';
-    var el = document.getElementById("adv-secs");
-    var cd = document.getElementById("adv-countdown");
-    if (!el) return;
-    function tick() {
-        if (secsLeft <= 0) {
-            if (cd) cd.innerHTML = "00:00:00";
-            setTimeout(function(){ location.reload(); }, 1000);
-            return;
-        }
-        secsLeft--;
-        var h = Math.floor(secsLeft / 3600);
-        var m = Math.floor((secsLeft % 3600) / 60);
-        var s = secsLeft % 60;
-        if (cd) cd.innerHTML =
-            String(h).padStart(2,"0") + ":" +
-            String(m).padStart(2,"0") + ":" +
-            String(s).padStart(2,"0");
-        setTimeout(tick, 1000);
-    }
-    setTimeout(tick, 1000);
-})();
-</script>';
-}
-
 require TPL_PATH . '/layout.php';
 ?>

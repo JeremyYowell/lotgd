@@ -392,3 +392,105 @@
     .adv-result        { padding: 1.5rem 1.25rem; }
     .result-roll-display { flex-wrap: wrap; }
 }
+
+/* -----------------------------------------------------------------------
+   LEVEL-UP BANNER
+----------------------------------------------------------------------- */
+.levelup-banner {
+    margin: 1.5rem 0;
+    background: linear-gradient(135deg, #1a1a2e, #16213e);
+    border: 2px solid var(--color-gold);
+    border-radius: var(--radius-lg);
+    padding: 2rem;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+    animation: levelup-appear 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+
+/* Gold shimmer sweep */
+.levelup-banner::before {
+    content: '';
+    position: absolute;
+    top: 0; left: -100%;
+    width: 50%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(212,160,23,0.12), transparent);
+    animation: levelup-sweep 1.5s ease 0.3s both;
+}
+
+@keyframes levelup-appear {
+    from { opacity: 0; transform: scale(0.92) translateY(12px); }
+    to   { opacity: 1; transform: scale(1)    translateY(0); }
+}
+
+@keyframes levelup-sweep {
+    from { left: -100%; }
+    to   { left: 200%; }
+}
+
+.levelup-burst {
+    font-size: 2.5rem;
+    line-height: 1;
+    margin-bottom: 0.5rem;
+    animation: levelup-burst 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) 0.1s both;
+}
+
+@keyframes levelup-burst {
+    from { transform: scale(0) rotate(-20deg); opacity: 0; }
+    to   { transform: scale(1) rotate(0deg);   opacity: 1; }
+}
+
+.levelup-title {
+    font-family: var(--font-heading);
+    font-size: 0.72rem;
+    letter-spacing: 0.25em;
+    text-transform: uppercase;
+    color: var(--color-gold-dark);
+    margin-bottom: 0.35rem;
+    animation: levelup-fadein 0.4s ease 0.2s both;
+}
+
+.levelup-level {
+    font-family: var(--font-display);
+    font-size: 2.8rem;
+    color: var(--color-gold-light);
+    line-height: 1;
+    margin-bottom: 1rem;
+    text-shadow: 0 0 30px rgba(212,160,23,0.4);
+    animation: levelup-fadein 0.4s ease 0.3s both;
+}
+
+.levelup-rewards {
+    display: flex;
+    gap: 0.75rem;
+    justify-content: center;
+    flex-wrap: wrap;
+    margin-bottom: 1rem;
+    animation: levelup-fadein 0.4s ease 0.4s both;
+}
+
+.levelup-reward-pill {
+    display: inline-block;
+    background: rgba(212,160,23,0.12);
+    border: 1px solid var(--color-border-gold);
+    border-radius: 20px;
+    padding: 0.3rem 0.85rem;
+    font-family: var(--font-heading);
+    font-size: 0.78rem;
+    letter-spacing: 0.06em;
+    color: var(--color-gold-light);
+}
+
+.levelup-desc {
+    font-size: 0.88rem;
+    color: var(--color-text-muted);
+    font-style: italic;
+    line-height: 1.5;
+    animation: levelup-fadein 0.4s ease 0.5s both;
+}
+
+@keyframes levelup-fadein {
+    from { opacity: 0; transform: translateY(8px); }
+    to   { opacity: 1; transform: translateY(0); }
+}

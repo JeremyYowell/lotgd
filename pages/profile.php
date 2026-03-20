@@ -100,6 +100,11 @@ $achievements = $db->fetchAll(
 $store    = new Store();
 $equipped = $store->getEquipped($profileId);
 
+// PvP stats
+$pvp      = new Pvp();
+$pvpStats = $pvp->getStats($profileId);
+$pvpTotal = $pvpStats['wins'] + $pvpStats['losses'] + $pvpStats['draws'];
+
 // XP progress
 $xpProgress = ($profileUser['xp_to_next_level'] > 0)
     ? min(100, (int)(($profileUser['xp'] / $profileUser['xp_to_next_level']) * 100))
@@ -159,6 +164,18 @@ ob_start();
                 Adventurer since <?= date('F Y', strtotime($profileUser['created_at'])) ?>
             </div>
         </div>
+        <?php if (!$isOwnProfile): ?>
+        <div style="display:flex;flex-direction:column;align-items:flex-end;gap:0.5rem;flex-shrink:0">
+            <a href="<?= BASE_URL ?>/pages/pvp.php?challenge=<?= $profileId ?>"
+               class="btn btn-primary" style="white-space:nowrap">
+                ⚔ Challenge
+            </a>
+            <a href="<?= BASE_URL ?>/pages/profile.php?user=<?= urlencode(Session::username()) ?>"
+               class="btn btn-secondary" style="font-size:0.78rem;padding:0.4rem 0.9rem">
+                My Profile
+            </a>
+        </div>
+        <?php endif; ?>
         <div class="profile-level-block">
             <span class="profile-level-num"><?= $profileUser['level'] ?></span>
             <span class="profile-level-label">LEVEL</span>
@@ -314,6 +331,50 @@ ob_start();
                 </div>
                 <?php endif; ?>
             </div>
+
+            <!-- COMBAT RECORD -->
+            <?php if ($pvpTotal > 0): ?>
+            <div class="card profile-section">
+                <h3 class="profile-section-title">⚔ Combat Record</h3>
+                <div class="profile-stat-grid" style="grid-template-columns:repeat(2,1fr)">
+                    <div class="pstat-box">
+                        <span class="pstat-val text-green"><?= $pvpStats['wins'] ?></span>
+                        <span class="pstat-label">Victories</span>
+                    </div>
+                    <div class="pstat-box">
+                        <span class="pstat-val text-red"><?= $pvpStats['losses'] ?></span>
+                        <span class="pstat-label">Defeats</span>
+                    </div>
+                    <div class="pstat-box">
+                        <span class="pstat-val" style="color:#f59e0b"><?= $pvpStats['draws'] ?></span>
+                        <span class="pstat-label">Draws</span>
+                    </div>
+                    <div class="pstat-box">
+                        <span class="pstat-val text-gold"><?= num($pvpStats['xp_earned']) ?></span>
+                        <span class="pstat-label">XP Earned</span>
+                    </div>
+                </div>
+                <?php if ($pvpTotal > 0): ?>
+                <div style="margin-top:0.75rem;text-align:center">
+                    <?php
+                    $winRate = round(($pvpStats['wins'] / $pvpTotal) * 100);
+                    ?>
+                    <span style="font-family:var(--font-heading);font-size:0.75rem;
+                                 letter-spacing:0.06em;color:var(--color-text-dim)">
+                        <?= $winRate ?>% win rate across <?= $pvpTotal ?> fights
+                    </span>
+                </div>
+                <?php endif; ?>
+                <?php if (!$isOwnProfile): ?>
+                <div style="margin-top:1rem">
+                    <a href="<?= BASE_URL ?>/pages/pvp.php?challenge=<?= $profileId ?>"
+                       class="btn btn-primary" style="font-size:0.8rem;padding:0.5rem 1rem">
+                        ⚔ Challenge to Combat
+                    </a>
+                </div>
+                <?php endif; ?>
+            </div>
+            <?php endif; ?>
 
             <!-- ACHIEVEMENTS -->
             <div class="card profile-section">

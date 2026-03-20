@@ -1,0 +1,542 @@
+/* =============================================================================
+   PvP COMBAT PAGE — assets/css/pvp.css
+   ============================================================================= */
+
+.pvp-wrap {
+    max-width: 960px;
+    margin: 0 auto;
+}
+
+/* -----------------------------------------------------------------------
+   HEADER
+----------------------------------------------------------------------- */
+.pvp-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    margin-bottom: 1.5rem;
+    flex-wrap: wrap;
+    gap: 1rem;
+}
+
+.pvp-header h1 { margin-bottom: 0.2rem; }
+
+.pvp-honor-badge {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    background: var(--color-bg-card);
+    border: 1px solid var(--color-border-gold);
+    border-radius: var(--radius);
+    padding: 0.6rem 1rem;
+}
+
+.pvp-honor-label {
+    font-family: var(--font-heading);
+    font-size: 0.62rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--color-text-dim);
+    margin-bottom: 0.2rem;
+}
+
+.pvp-honor-val {
+    font-family: var(--font-heading);
+    font-size: 1.1rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+}
+
+/* -----------------------------------------------------------------------
+   IDLE LAYOUT
+----------------------------------------------------------------------- */
+.pvp-layout {
+    display: grid;
+    grid-template-columns: 1fr 320px;
+    gap: 1.25rem;
+    align-items: start;
+}
+
+.pvp-main,
+.pvp-sidebar {
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+}
+
+.pvp-section-title {
+    font-family: var(--font-heading);
+    font-size: 0.82rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--color-text-muted);
+    margin-bottom: 1.25rem;
+}
+
+/* -----------------------------------------------------------------------
+   MY STATS CARD
+----------------------------------------------------------------------- */
+.pvp-mystats { padding: 1.5rem; }
+
+.pvp-stat-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.5rem 0;
+    border-bottom: 1px solid var(--color-border);
+    font-size: 0.9rem;
+}
+.pvp-stat-row:last-child { border-bottom: none; }
+
+/* -----------------------------------------------------------------------
+   TARGET LIST
+----------------------------------------------------------------------- */
+.pvp-targets { padding: 1.5rem; }
+
+.pvp-target-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.pvp-target-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 0.75rem;
+    background: var(--color-bg-input);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius);
+    transition: border-color 0.2s;
+}
+
+.pvp-target-row:hover { border-color: var(--color-border-gold); }
+
+.pvp-target-info {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    min-width: 0;
+}
+
+.pvp-target-icon { font-size: 1.4rem; flex-shrink: 0; }
+
+.pvp-target-body {
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+    min-width: 0;
+}
+
+.pvp-target-name {
+    font-family: var(--font-heading);
+    font-size: 0.9rem;
+    letter-spacing: 0.03em;
+    color: var(--color-gold-light);
+}
+.pvp-target-name:hover { color: #fff; }
+
+.pvp-target-meta { font-size: 0.75rem; }
+
+.pvp-challenge-btn {
+    flex-shrink: 0;
+    padding: 0.45rem 1rem;
+    font-size: 0.78rem;
+}
+
+/* -----------------------------------------------------------------------
+   RECENT FIGHTS
+----------------------------------------------------------------------- */
+.pvp-recent { padding: 1.5rem; }
+
+.pvp-recent-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.pvp-recent-row {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.45rem 0;
+    border-bottom: 1px solid var(--color-border);
+}
+.pvp-recent-row:last-child { border-bottom: none; }
+
+.pvp-recent-badge {
+    width: 24px;
+    height: 24px;
+    border: 1px solid;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--font-heading);
+    font-size: 0.65rem;
+    font-weight: 700;
+    flex-shrink: 0;
+}
+
+.pvp-recent-body {
+    display: flex;
+    flex-direction: column;
+    gap: 0.1rem;
+}
+
+.pvp-recent-name {
+    font-family: var(--font-heading);
+    font-size: 0.82rem;
+    color: var(--color-gold-light);
+    letter-spacing: 0.03em;
+}
+.pvp-recent-name:hover { color: #fff; }
+
+/* -----------------------------------------------------------------------
+   RULES CARD
+----------------------------------------------------------------------- */
+.pvp-rules { padding: 1.5rem; }
+
+.pvp-rules-list {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.pvp-rules-list li {
+    font-size: 0.85rem;
+    color: var(--color-text-muted);
+    padding-left: 1rem;
+    position: relative;
+    line-height: 1.4;
+}
+
+.pvp-rules-list li::before {
+    content: '·';
+    position: absolute;
+    left: 0;
+    color: var(--color-gold-dark);
+}
+
+/* -----------------------------------------------------------------------
+   ARENA (FIGHTING STATE)
+----------------------------------------------------------------------- */
+.pvp-arena {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+.pvp-combatants {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    gap: 1rem;
+    align-items: center;
+}
+
+.combatant-card {
+    background: var(--color-bg-card);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+    padding: 1.5rem;
+    text-align: center;
+    transition: border-color 0.3s;
+}
+
+.combatant-card.you   { border-color: var(--color-border-gold); }
+.combatant-card.enemy { border-color: #7f1d1d; }
+
+.combatant-icon  { font-size: 2.5rem; margin-bottom: 0.5rem; }
+.combatant-name  { font-family: var(--font-heading); font-size: 0.95rem; letter-spacing: 0.04em; color: var(--color-gold-light); margin-bottom: 0.2rem; }
+.combatant-level { font-size: 0.8rem; margin-bottom: 0.75rem; }
+
+.combatant-hp-wrap {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+    margin-bottom: 0.75rem;
+}
+
+.combatant-hp-bar-bg {
+    height: 8px;
+    background: var(--color-border);
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.combatant-hp-bar {
+    height: 100%;
+    border-radius: 4px;
+    transition: width 0.4s ease, background 0.4s ease;
+}
+
+.combatant-hp-text {
+    font-family: var(--font-heading);
+    font-size: 0.78rem;
+    letter-spacing: 0.06em;
+    color: var(--color-text-muted);
+}
+
+.combatant-stats { font-size: 0.78rem; }
+
+.pvp-vs {
+    font-family: var(--font-display);
+    font-size: 1.6rem;
+    color: var(--color-gold);
+    text-align: center;
+    opacity: 0.6;
+}
+
+.pvp-round-indicator {
+    text-align: center;
+    font-family: var(--font-heading);
+    font-size: 0.72rem;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--color-text-dim);
+}
+
+/* -----------------------------------------------------------------------
+   COMBAT LOG
+----------------------------------------------------------------------- */
+.pvp-log { padding: 1.25rem; }
+
+.pvp-log-title {
+    font-family: var(--font-heading);
+    font-size: 0.75rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--color-text-muted);
+    margin-bottom: 0.75rem;
+}
+
+.pvp-log-body {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    max-height: 280px;
+    overflow-y: auto;
+    font-family: monospace;
+    font-size: 0.82rem;
+    line-height: 1.5;
+}
+
+.log-line      { color: var(--color-text-muted); }
+.log-hit       { color: var(--color-text); }
+.log-miss      { color: var(--color-text-dim); font-style: italic; }
+.log-init      { color: var(--color-gold-dark); }
+.log-defeat    { color: #ef4444; font-weight: 600; }
+
+/* -----------------------------------------------------------------------
+   ACTION BUTTONS
+----------------------------------------------------------------------- */
+.pvp-actions {
+    display: flex;
+    gap: 1rem;
+    justify-content: center;
+    flex-wrap: wrap;
+}
+
+.pvp-attack-btn {
+    font-size: 1rem;
+    padding: 0.85rem 2.5rem;
+}
+
+/* -----------------------------------------------------------------------
+   RESULT STATE
+----------------------------------------------------------------------- */
+.pvp-result {
+    padding: 2rem;
+    text-align: center;
+}
+
+.pvp-result-badge {
+    display: inline-block;
+    border: 1px solid;
+    border-radius: 6px;
+    padding: 0.6rem 1.5rem;
+    font-family: var(--font-heading);
+    font-size: 1.2rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    margin-bottom: 0.75rem;
+}
+
+.pvp-result-xp {
+    font-family: var(--font-display);
+    font-size: 2rem;
+    color: var(--color-gold-light);
+    margin-bottom: 0.25rem;
+}
+
+/* -----------------------------------------------------------------------
+   RESPONSIVE
+----------------------------------------------------------------------- */
+@media (max-width: 720px) {
+    .pvp-layout      { grid-template-columns: 1fr; }
+    .pvp-combatants  { grid-template-columns: 1fr; }
+    .pvp-vs          { display: none; }
+    .pvp-honor-badge { align-items: flex-start; }
+}
+
+/* -----------------------------------------------------------------------
+   IMPROVED HP METERS
+----------------------------------------------------------------------- */
+.hp-meter-label {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-bottom: 0.3rem;
+    font-family: var(--font-heading);
+    font-size: 0.82rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+}
+
+.hp-meter-track {
+    height: 14px;
+    background: rgba(255,255,255,0.06);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 7px;
+    overflow: hidden;
+    margin-bottom: 0.3rem;
+    position: relative;
+}
+
+.hp-meter-fill {
+    height: 100%;
+    border-radius: 7px;
+    transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1),
+                background 0.4s ease;
+    position: relative;
+}
+
+/* Shimmer effect on the bar */
+.hp-meter-fill::after {
+    content: '';
+    position: absolute;
+    top: 0; left: -100%;
+    width: 60%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.15), transparent);
+    animation: hp-shimmer 2s ease infinite;
+}
+
+@keyframes hp-shimmer {
+    0%   { left: -100%; }
+    100% { left: 200%; }
+}
+
+.hp-meter-danger {
+    font-family: var(--font-heading);
+    font-size: 0.65rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: #ef4444;
+    text-align: center;
+    animation: danger-pulse 1s ease infinite;
+}
+
+@keyframes danger-pulse {
+    0%, 100% { opacity: 1; }
+    50%       { opacity: 0.4; }
+}
+
+/* Pre-selected target from profile challenge link */
+.pvp-preselect-notice {
+    background: rgba(212,160,23,0.08);
+    border: 1px solid var(--color-border-gold);
+    border-radius: var(--radius);
+    padding: 0.6rem 0.9rem;
+    font-size: 0.88rem;
+    color: var(--color-text-muted);
+    margin-bottom: 1rem;
+}
+
+.pvp-target-highlighted {
+    border-color: var(--color-gold) !important;
+    background: rgba(212,160,23,0.06) !important;
+}
+
+/* -----------------------------------------------------------------------
+   RESULT SCREEN
+----------------------------------------------------------------------- */
+.pvp-result-wrap {
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+    max-width: 700px;
+    margin: 0 auto;
+}
+
+.pvp-result-banner {
+    border-radius: var(--radius-lg);
+    padding: 2.5rem 2rem;
+    text-align: center;
+    border: 2px solid;
+}
+
+.pvp-result-challenger_win {
+    background: linear-gradient(135deg, #052e16, #0d2b1a);
+    border-color: #22c55e;
+}
+
+.pvp-result-defender_win {
+    background: linear-gradient(135deg, #2d0a0a, #1a0505);
+    border-color: #ef4444;
+}
+
+.pvp-result-draw {
+    background: linear-gradient(135deg, #2d1a00, #1a1000);
+    border-color: #f59e0b;
+}
+
+.pvp-result-fled {
+    background: linear-gradient(135deg, #1a1a2e, #0d0d1a);
+    border-color: #6b82a0;
+}
+
+.pvp-result-icon {
+    font-size: 3rem;
+    line-height: 1;
+    margin-bottom: 0.5rem;
+}
+
+.pvp-result-title {
+    font-family: var(--font-display);
+    font-size: 2rem;
+    margin-bottom: 0.5rem;
+    letter-spacing: 0.04em;
+}
+
+.pvp-result-subtitle {
+    font-size: 1.05rem;
+    color: var(--color-text-muted);
+    font-style: italic;
+}
+
+.pvp-result-rewards {
+    padding: 1.5rem;
+}
+
+.pvp-reward-row {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.6rem 0;
+    border-bottom: 1px solid var(--color-border);
+    font-size: 0.95rem;
+}
+
+.pvp-reward-row:last-child { border-bottom: none; }
+.pvp-reward-icon { font-size: 1.1rem; flex-shrink: 0; }
+.pvp-reward-label { flex: 1; color: var(--color-text-muted); }
+.pvp-reward-val { font-family: var(--font-heading); font-size: 0.9rem; font-weight: 600; }
+
+.pvp-result-actions {
+    display: flex;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+}

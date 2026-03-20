@@ -377,7 +377,10 @@ ob_start();
                         <td class="lbm-pos">#<?= $row['position'] ?></td>
                         <td class="lbm-name">
                             <?= $classIcons[$row['class']] ?? '⚔️' ?>
-                            <?= e($row['username']) ?>
+                            <a href="<?= BASE_URL ?>/pages/profile.php?user=<?= urlencode($row['username']) ?>"
+                               style="color:var(--color-gold-light);text-decoration:none">
+                                <?= e($row['username']) ?>
+                            </a>
                             <?= $isMe ? '<span class="you-tag">you</span>' : '' ?>
                         </td>
                         <td class="lbm-ret <?= $ret >= 0 ? 'text-green' : 'text-red' ?>">
@@ -402,7 +405,10 @@ ob_start();
                         <td class="lbm-pos text-muted">💀</td>
                         <td class="lbm-name">
                             <?= $classIcons[$row['class']] ?? '⚔️' ?>
-                            <?= e($row['username']) ?>
+                            <a href="<?= BASE_URL ?>/pages/profile.php?user=<?= urlencode($row['username']) ?>"
+                               style="color:var(--color-gold-light);text-decoration:none">
+                                <?= e($row['username']) ?>
+                            </a>
                             <?= $isMe ? '<span class="you-tag">you</span>' : '' ?>
                         </td>
                         <td class="lbm-ret text-red"><?= number_format($ret, 2) ?>%</td>
