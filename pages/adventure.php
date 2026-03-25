@@ -88,6 +88,51 @@ function clearAdvSession(int $userId): void {
     $db->run("DELETE FROM adventure_sessions WHERE user_id = ?", [$userId]);
 }
 
+/**
+ * The three Debt Dragon challenge choices (hardcoded — not DB-driven).
+ * Category is 'banking' so Debt Slayers receive their +3 class bonus.
+ */
+function getDragonChoices(): array {
+    return [
+        [
+            'id'                     => 1,
+            'choice_text'            => 'Invoke the Debt Avalanche — strike the highest-rate debt first',
+            'hint_text'              => 'Mathematical precision. Highest interest falls first.',
+            'difficulty'             => 13,
+            'crit_gold_bonus'        => 25,
+            'crit_gold_penalty'      => 12,
+            'success_narrative'      => 'You identify the highest-rate debt and strike with calculated fury. The dragon\'s scales crack where the interest lives. It staggers. A window opens in the dungeon wall — daylight, and another adventure beyond it.',
+            'failure_narrative'      => 'The Avalanche requires more discipline than the dragon permits today. You falter before the highest peak. The dragon exhales interest in your direction. You retreat without gain, but without loss.',
+            'crit_success_narrative' => 'A perfect strike. The highest-rate debt is obliterated in a burst of golden light. The dragon howls. The dungeon shakes. Coins rain from the ceiling and the door swings open ahead of you.',
+            'crit_failure_narrative' => 'The Avalanche buries you first. The dragon laughs with compound frequency. Some of the gold you were carrying scatters across the dungeon floor.',
+        ],
+        [
+            'id'                     => 2,
+            'choice_text'            => 'Deploy the Debt Snowball — eliminate the smallest balance first',
+            'hint_text'              => 'Momentum is its own magic. Small wins compound.',
+            'difficulty'             => 10,
+            'crit_gold_bonus'        => 20,
+            'crit_gold_penalty'      => 8,
+            'success_narrative'      => 'The smallest debt falls cleanly. The dragon staggers backward. Something like hope fills the chamber. A path forward glows faintly at the end of the dungeon.',
+            'failure_narrative'      => 'The Snowball gains speed but loses direction. The dragon sidesteps it entirely. You eye each other across the dungeon floor. Neither side advances.',
+            'crit_success_narrative' => 'Three small debts fall in rapid succession, each one feeding the next. The dragon cannot recover its footing. The realm recognizes your momentum and grants you the strength to continue.',
+            'crit_failure_narrative' => 'The Snowball rolls back down the hill. You slip. The dragon takes something small but insulting from your coin pouch as you scramble to your feet.',
+        ],
+        [
+            'id'                     => 3,
+            'choice_text'            => 'Negotiate a settlement — offer the dragon 60 cents on the dollar',
+            'hint_text'              => 'Dragons sometimes negotiate. Sometimes.',
+            'difficulty'             => 8,
+            'crit_gold_bonus'        => 18,
+            'crit_gold_penalty'      => 6,
+            'success_narrative'      => 'The dragon, exhausted by the chase, accepts your terms. The settled amount is less than the full balance. You clasp hands at the dungeon gate as the exit opens behind you.',
+            'failure_narrative'      => 'The dragon snorts at your offer. Negotiations collapse entirely. You retreat without loss, but also without progress. The dungeon remains.',
+            'crit_success_narrative' => 'Forty-eight cents on the dollar. The dragon cannot believe it either. You shake hands. The realm is astonished. A bonus spills from the rafters as the door falls open.',
+            'crit_failure_narrative' => 'The dragon reports the failed negotiation to an unseen bureau. A small fine is assessed. You hear distant laughter echo through the stone corridors.',
+        ],
+    ];
+}
+
 // =========================================================================
 // HANDLE POSTS
 // =========================================================================
@@ -195,11 +240,131 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     // ------------------------------------------------------------------
-    // DONE — clear session, go to dashboard
+    // DONE — clear session, stay on adventure page (dragon may be waiting)
     // ------------------------------------------------------------------
     if ($action === 'done') {
         clearAdvSession($userId);
-        redirect('/pages/dashboard.php');
+        redirect('/pages/adventure.php');
+    }
+
+    // ------------------------------------------------------------------
+    // DRAGON_START — save dragon challenge to DB session, show choices
+    // ------------------------------------------------------------------
+    if ($action === 'dragon_start') {
+        $freshState = $userModel->getDailyState($userId);
+        // Guard: exhausted and not yet used today
+        if ($freshState['actions_remaining'] > 0 || !empty($freshState['dragon_challenge_used'])) {
+            redirect('/pages/adventure.php');
+        }
+        $db->run(
+            "INSERT INTO adventure_sessions
+                 (user_id, state, scenario_id, choices_json, result_json, action_consumed)
+             VALUES (?, 'dragon', 0, ?, NULL, 0)
+             ON DUPLICATE KEY UPDATE
+                 state           = 'dragon',
+                 scenario_id     = 0,
+                 choices_json    = VALUES(choices_json),
+                 result_json     = NULL,
+                 action_consumed = 0,
+                 updated_at      = NOW()",
+            [$userId, json_encode(getDragonChoices())]
+        );
+        redirect('/pages/adventure.php');
+    }
+
+    // ------------------------------------------------------------------
+    // DRAGON_CHOOSE — roll dice, resolve outcome, restore action on win
+    // ------------------------------------------------------------------
+    if ($action === 'dragon_choose') {
+        $dragonChoiceId = (int)($_POST['dragon_choice_id'] ?? 0);
+        $advSession     = getAdvSession($userId);
+
+        if (!$advSession || $advSession['state'] !== 'dragon') {
+            clearAdvSession($userId);
+            redirect('/pages/adventure.php');
+        }
+
+        $allChoices  = json_decode($advSession['choices_json'], true) ?? [];
+        $choice      = null;
+        foreach ($allChoices as $dc) {
+            if ((int)$dc['id'] === $dragonChoiceId) { $choice = $dc; break; }
+        }
+        if (!$choice) {
+            redirect('/pages/adventure.php');
+        }
+
+        // Roll — category 'banking' so Debt Slayers get class bonus
+        $rawRoll   = rand(1, 20);
+        $modifier  = $adventure->calculateModifier((int)$user['level'], $user['class'], 'banking', 0);
+        $finalRoll = $rawRoll + $modifier;
+        $dc        = $choice['difficulty'];
+
+        if ($rawRoll === 20) {
+            $outcome = 'crit_success';
+        } elseif ($finalRoll >= $dc) {
+            $outcome = 'success';
+        } elseif ($finalRoll < $dc - 4) {
+            $outcome = 'crit_failure';
+        } else {
+            $outcome = 'failure';
+        }
+
+        // Apply rewards / penalties
+        $goldDelta      = 0;
+        $actionRestored = false;
+        if ($outcome === 'success' || $outcome === 'crit_success') {
+            $db->run(
+                "UPDATE daily_state SET actions_remaining = actions_remaining + 1
+                 WHERE user_id = ? AND state_date = ?",
+                [$userId, date('Y-m-d')]
+            );
+            $actionRestored = true;
+            if ($outcome === 'crit_success') {
+                $goldDelta = (int)($choice['crit_gold_bonus'] ?? 20);
+                $db->run("UPDATE users SET gold = gold + ? WHERE id = ?", [$goldDelta, $userId]);
+            }
+        } elseif ($outcome === 'crit_failure') {
+            $goldDelta = -(int)($choice['crit_gold_penalty'] ?? 8);
+            $db->run(
+                "UPDATE users SET gold = GREATEST(0, gold + ?) WHERE id = ?",
+                [$goldDelta, $userId]
+            );
+        }
+
+        // Mark dragon challenge used for today
+        $db->run(
+            "UPDATE daily_state SET dragon_challenge_used = 1
+             WHERE user_id = ? AND state_date = ?",
+            [$userId, date('Y-m-d')]
+        );
+
+        // Persist result to session
+        $dragonResult = [
+            'outcome'         => $outcome,
+            'roll'            => $rawRoll,
+            'modifier'        => $modifier,
+            'final_roll'      => $finalRoll,
+            'difficulty'      => $dc,
+            'choice_text'     => $choice['choice_text'],
+            'narrative'       => $choice[$outcome . '_narrative'],
+            'gold_delta'      => $goldDelta,
+            'action_restored' => $actionRestored,
+        ];
+        $db->run(
+            "UPDATE adventure_sessions
+             SET state = 'dragon_result', result_json = ?, updated_at = NOW()
+             WHERE user_id = ?",
+            [json_encode($dragonResult), $userId]
+        );
+        redirect('/pages/adventure.php');
+    }
+
+    // ------------------------------------------------------------------
+    // DRAGON_DISMISS — clear session, return to idle
+    // ------------------------------------------------------------------
+    if ($action === 'dragon_dismiss') {
+        clearAdvSession($userId);
+        redirect('/pages/adventure.php');
     }
 }
 
@@ -239,6 +404,23 @@ if ($advSession) {
         } else {
             clearAdvSession($userId);
         }
+    } elseif ($advSession['state'] === 'dragon') {
+        $dragonChoiceRows = json_decode($advSession['choices_json'], true) ?? [];
+        if (!empty($dragonChoiceRows)) {
+            $state   = 'dragon';
+            $choices = $dragonChoiceRows;
+        } else {
+            clearAdvSession($userId);
+        }
+    } elseif ($advSession['state'] === 'dragon_result' && $advSession['result_json']) {
+        $resultData = json_decode($advSession['result_json'], true);
+        if ($resultData) {
+            $state  = 'dragon_result';
+            $result = $resultData;
+            $user   = $userModel->findById($userId);
+        } else {
+            clearAdvSession($userId);
+        }
     }
 }
 
@@ -248,6 +430,11 @@ if ($advSession) {
 $dailyState  = $userModel->getDailyState($userId);
 $actionLimit = (int)$db->getSetting('daily_action_limit', 10);
 $voiceMode   = (bool)($user['voice_mode'] ?? false);
+
+// Next midnight in server timezone (for action reset countdown)
+$tz              = new DateTimeZone('America/Chicago');
+$nextMidnight    = new DateTime('tomorrow midnight', $tz);
+$nextMidnightTs  = $nextMidnight->getTimestamp();
 
 // Load audio file map for current scenario if in scenario/result state
 $audioMap = [];
@@ -270,6 +457,10 @@ $recentLog = [];
 if ($state === 'idle') {
     $recentLog = $adventure->getRecentLog($userId, 8);
 }
+
+$dragonAvailable = ($state === 'idle')
+    && ($dailyState['actions_remaining'] <= 0)
+    && empty($dailyState['dragon_challenge_used']);
 
 $categoryMeta = [
     'shopping'   => ['icon' => '🛒', 'label' => 'Shopping',   'color' => '#ec4899'],
@@ -349,6 +540,36 @@ ob_start();
                     <div class="adv-rest-icon">🌙</div>
                     <h2 class="text-muted">You are weary, adventurer.</h2>
                     <p class="text-muted">You have spent all your actions for today. The tavern awaits. Return at dawn.</p>
+                    <p class="text-muted" style="margin-top:0.75rem;font-size:0.9rem">
+                        Actions reset in <strong id="adv-countdown" class="text-gold" style="font-family:var(--font-heading);letter-spacing:0.05em">--:--:--</strong>
+                    </p>
+
+                    <?php if ($dragonAvailable): ?>
+                    <div class="dragon-challenge-card">
+                        <div class="dragon-icon">🐉</div>
+                        <h3 class="dragon-title">The Debt Dragon Stirs</h3>
+                        <p class="dragon-desc">
+                            Deep in the dungeon below the tavern, something ancient stirs. The Debt Dragon has awoken —
+                            and it is hungry. One bold adventurer may challenge it before dawn.
+                            Slay it and earn one more adventure today.
+                        </p>
+                        <p class="dragon-hint">One attempt per day. No actions required to enter.</p>
+                        <form method="POST" style="margin-top:1rem">
+                            <?= Session::csrfField() ?>
+                            <input type="hidden" name="action" value="dragon_start">
+                            <button type="submit" class="btn dragon-btn">
+                                🐉 Descend into the Dungeon
+                            </button>
+                        </form>
+                    </div>
+                    <?php elseif (!empty($dailyState['dragon_challenge_used'])): ?>
+                    <div class="dragon-challenge-card dragon-used">
+                        <div class="dragon-icon" style="opacity:0.4">🐉</div>
+                        <p class="text-muted" style="font-size:0.88rem;margin:0">
+                            The Debt Dragon has been faced today. It will return tomorrow.
+                        </p>
+                    </div>
+                    <?php endif; ?>
                 <?php else: ?>
                     <div class="adv-ready-icon">⚔️</div>
                     <h2>Ready for Adventure?</h2>
@@ -582,6 +803,129 @@ ob_start();
 
     </div>
 
+    <?php elseif ($state === 'dragon' && $choices): ?>
+    <!-- =====================================================
+         DRAGON — choice screen
+    ===================================================== -->
+    <?php
+    $totalMod = $adventure->calculateModifier((int)$user['level'], $user['class'], 'banking', 0);
+    ?>
+    <div class="adv-encounter dragon-encounter">
+
+        <div class="encounter-category">
+            <span>🐉</span>
+            <span style="color:#ef4444">Debt Dragon Challenge</span>
+            <span style="color:var(--color-text-dim);font-size:0.65rem;margin-left:0.5rem">— Once Per Day</span>
+        </div>
+
+        <h2 class="encounter-title" style="color:#fca5a5">The Debt Dragon</h2>
+
+        <p class="encounter-flavor">"Some debts are not merely financial. They are monsters."</p>
+
+        <p class="encounter-desc" style="margin-bottom:2rem">
+            The dungeon reeks of compound interest. The Debt Dragon blocks the far door,
+            scales glinting with accumulated fees and unpaid balances. It eyes you with the
+            patience of a 30-year mortgage. You have one chance to break through.
+            Choose your weapon.
+        </p>
+
+        <div class="encounter-modifier-hint" style="margin-bottom:1.25rem">
+            Your modifier: <strong class="text-gold">+<?= $totalMod ?></strong>
+            (Level <?= $user['level'] ?> + class bonus<?= $user['class'] === 'debt_slayer' ? ' <span style="color:#ef4444">⚔ +3 Debt Slayer</span>' : '' ?>)
+        </div>
+
+        <div class="encounter-choices">
+            <?php foreach ($choices as $choice): ?>
+            <form method="POST" class="choice-form">
+                <?= Session::csrfField() ?>
+                <input type="hidden" name="action"          value="dragon_choose">
+                <input type="hidden" name="dragon_choice_id" value="<?= (int)$choice['id'] ?>">
+                <button type="submit" class="choice-btn dragon-choice-btn">
+                    <span class="choice-text"><?= e($choice['choice_text']) ?></span>
+                    <span class="choice-hint"><?= e($choice['hint_text']) ?></span>
+                </button>
+            </form>
+            <?php endforeach; ?>
+        </div>
+
+        <p class="text-muted" style="font-size:0.78rem;margin-top:1.5rem;text-align:center">
+            ⚠ This is your one dragon challenge for today. Choose wisely.
+        </p>
+
+    </div>
+
+    <?php elseif ($state === 'dragon_result' && $result): ?>
+    <!-- =====================================================
+         DRAGON RESULT — outcome screen
+    ===================================================== -->
+    <?php $ol = $outcomeLabels[$result['outcome']] ?? $outcomeLabels['failure']; ?>
+    <div class="adv-result dragon-result <?= $result['outcome'] ?>-result">
+
+        <div class="result-outcome-badge" style="color:<?= $ol['color'] ?>;border-color:<?= $ol['color'] ?>">
+            🐉 <?= $ol['icon'] ?> <?= $ol['label'] ?>
+        </div>
+
+        <h2 class="result-scenario-title">The Debt Dragon</h2>
+        <p class="result-choice-echo text-muted">You chose: <em><?= e($result['choice_text']) ?></em></p>
+
+        <div class="result-roll-display">
+            <div class="roll-die">
+                <span class="roll-number"><?= $result['final_roll'] ?></span>
+                <span class="roll-label">Final Roll</span>
+            </div>
+            <div class="roll-breakdown">
+                <span>d20: <strong><?= $result['roll'] ?></strong></span>
+                <span>+ modifier: <strong><?= $result['modifier'] >= 0 ? '+' . $result['modifier'] : $result['modifier'] ?></strong></span>
+                <span>vs DC: <strong><?= $result['difficulty'] ?></strong></span>
+            </div>
+        </div>
+
+        <div class="result-narrative"><?= nl2br(e($result['narrative'])) ?></div>
+
+        <div class="result-rewards">
+            <?php if ($result['action_restored']): ?>
+                <span class="reward-badge" style="color:#fbbf24;border-color:#8a6a1a;background:rgba(212,160,23,0.12)">
+                    +1 ⚔ Action Restored
+                </span>
+            <?php else: ?>
+                <span class="reward-badge" style="color:#6b82a0;border-color:#2a3a55">No action earned</span>
+            <?php endif; ?>
+
+            <?php if ($result['gold_delta'] > 0): ?>
+                <span class="reward-badge" style="color:#f0d980;border-color:#8a6a1a;background:rgba(212,160,23,0.1)">
+                    +<?= $result['gold_delta'] ?> 🪙 Gold
+                </span>
+            <?php elseif ($result['gold_delta'] < 0): ?>
+                <span class="reward-badge" style="color:#fca5a5;border-color:#7f1d1d;background:rgba(239,68,68,0.1)">
+                    <?= $result['gold_delta'] ?> 🪙 Gold
+                </span>
+            <?php endif; ?>
+        </div>
+
+        <div class="result-actions mt-3">
+            <?php if ($result['action_restored']): ?>
+                <form method="POST" style="display:inline">
+                    <?= Session::csrfField() ?>
+                    <input type="hidden" name="action" value="dragon_dismiss">
+                    <button type="submit" class="btn btn-primary">
+                        ⚔ Use My Restored Action
+                    </button>
+                </form>
+            <?php else: ?>
+                <form method="POST" style="display:inline">
+                    <?= Session::csrfField() ?>
+                    <input type="hidden" name="action" value="dragon_dismiss">
+                    <button type="submit" class="btn btn-secondary">🌙 Return to the Tavern</button>
+                </form>
+            <?php endif; ?>
+            <a href="<?= BASE_URL ?>/pages/dashboard.php"
+               class="btn btn-secondary" style="margin-left:0.5rem">
+                Dashboard
+            </a>
+        </div>
+
+    </div>
+
     <?php endif; ?>
 
 </div>
@@ -662,6 +1006,26 @@ function playAudio(url, onEnd) {
     });
     return a;
 }
+
+// ── Midnight countdown (shown when out of actions) ─────────────────────────
+(function() {
+    var el = document.getElementById("adv-countdown");
+    if (!el) return;
+    var nextMidnight = ' . $nextMidnightTs . ';
+    function tick() {
+        var diff = nextMidnight - Math.floor(Date.now() / 1000);
+        if (diff <= 0) { el.textContent = "00:00:00"; return; }
+        var h = Math.floor(diff / 3600);
+        var m = Math.floor((diff % 3600) / 60);
+        var s = diff % 60;
+        el.textContent =
+            String(h).padStart(2, "0") + ":" +
+            String(m).padStart(2, "0") + ":" +
+            String(s).padStart(2, "0");
+    }
+    tick();
+    setInterval(tick, 1000);
+})();
 
 // ── On scenario screen: auto-play title/desc, then choices sequentially ────
 document.addEventListener("DOMContentLoaded", function() {

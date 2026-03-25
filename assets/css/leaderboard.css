@@ -276,6 +276,16 @@ td.col-player {
 .col-saved  { width: 100px; text-align: right; color: var(--color-green); }
 .col-debt   { width: 100px; text-align: right; color: #f59e0b; }
 .col-streak { width: 80px;  text-align: right; color: var(--color-text-muted); }
+.col-pvp    { width: 110px; text-align: center; }
+
+.pvp-record {
+    font-family: var(--font-heading);
+    font-size: 0.78rem;
+    letter-spacing: 0.04em;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+}
 
 .lb-empty {
     text-align: center;
@@ -358,6 +368,8 @@ td.col-player {
     .fame-strip   { grid-template-columns: repeat(2, 1fr); }
     .sort-tabs    { gap: 0.3rem; }
     .sort-tab     { font-size: 0.65rem; padding: 0.3rem 0.6rem; }
-    .col-streak   { display: none; }
-    .lb-full-table thead th.col-streak { display: none; }
+    .col-streak,
+    .col-pvp    { display: none; }
+    .lb-full-table thead th.col-streak,
+    .lb-full-table thead th.col-pvp { display: none; }
 }

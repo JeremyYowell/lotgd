@@ -46,6 +46,17 @@ $adventureStats = $db->fetchOne(
     [$userId]
 );
 
+// PvP stats for the player card
+$pvpStats = $db->fetchOne(
+    "SELECT
+        COALESCE(wins, 0)   AS wins,
+        COALESCE(losses, 0) AS losses,
+        COALESCE(draws, 0)  AS draws,
+        COALESCE(xp_earned, 0) AS xp_earned
+     FROM pvp_stats WHERE user_id = ?",
+    [$userId]
+) ?: ['wins' => 0, 'losses' => 0, 'draws' => 0, 'xp_earned' => 0];
+
 // Leaderboard — portfolio % return as primary sort, fall back to XP
 $leaderboard = $db->fetchAll(
     "SELECT
@@ -183,6 +194,23 @@ ob_start();
                         <?= $adventureStats['crits'] ?? 0 ?>
                     </span>
                     <span class="wealth-label">Crit Successes</span>
+                </div>
+            </div>
+
+            <!-- PvP Stats Row -->
+            <div class="pvp-stats-row">
+                <span class="pvp-stats-label">⚔ PvP</span>
+                <div class="pvp-stats-pills">
+                    <span class="pvp-pill pvp-win"><?= (int)$pvpStats['wins'] ?>W</span>
+                    <span class="pvp-pill pvp-loss"><?= (int)$pvpStats['losses'] ?>L</span>
+                    <span class="pvp-pill pvp-draw"><?= (int)$pvpStats['draws'] ?>D</span>
+                    <?php
+                    $pvpTotal = (int)$pvpStats['wins'] + (int)$pvpStats['losses'] + (int)$pvpStats['draws'];
+                    $pvpWinRate = $pvpTotal > 0 ? round(($pvpStats['wins'] / $pvpTotal) * 100) : 0;
+                    ?>
+                    <span class="pvp-pill pvp-pct text-muted"><?= $pvpWinRate ?>%</span>
+                    <a href="<?= BASE_URL ?>/pages/pvp.php"
+                       class="pvp-pill pvp-go">Challenge →</a>
                 </div>
             </div>
         </div>

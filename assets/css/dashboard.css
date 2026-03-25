@@ -405,6 +405,58 @@
 .text-right { text-align: right; }
 
 /* -----------------------------------------------------------------------
+   PVP STATS ROW (inside player stats card)
+----------------------------------------------------------------------- */
+.pvp-stats-row {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-top: 0.85rem;
+    padding-top: 0.85rem;
+    border-top: 1px solid var(--color-border);
+}
+
+.pvp-stats-label {
+    font-family: var(--font-heading);
+    font-size: 0.72rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--color-text-muted);
+    flex-shrink: 0;
+}
+
+.pvp-stats-pills {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    flex-wrap: wrap;
+}
+
+.pvp-pill {
+    font-family: var(--font-heading);
+    font-size: 0.75rem;
+    letter-spacing: 0.05em;
+    padding: 0.2rem 0.55rem;
+    border-radius: 20px;
+    border: 1px solid var(--color-border);
+    background: var(--color-bg-input);
+}
+
+.pvp-pill.pvp-win  { color: var(--color-green); border-color: #166534; }
+.pvp-pill.pvp-loss { color: var(--color-red);   border-color: #7f1d1d; }
+.pvp-pill.pvp-draw { color: #f59e0b;             border-color: #78350f; }
+.pvp-pill.pvp-pct  { color: var(--color-text-dim); }
+.pvp-pill.pvp-go   {
+    color: var(--color-gold);
+    border-color: var(--color-border-gold);
+    text-decoration: none;
+    transition: background var(--transition);
+}
+.pvp-pill.pvp-go:hover {
+    background: rgba(212,160,23,0.1);
+}
+
+/* -----------------------------------------------------------------------
    RESPONSIVE
 ----------------------------------------------------------------------- */
 @media (max-width: 860px) {

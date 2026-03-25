@@ -12,7 +12,7 @@ $user      = $userModel->findById($userId);
 // =========================================================================
 // SORTING
 // =========================================================================
-$validSorts = ['pct_return', 'xp', 'level', 'login_streak'];
+$validSorts = ['pct_return', 'xp', 'level', 'login_streak', 'pvp_wins'];
 $sort       = in_array($_GET['sort'] ?? '', $validSorts) ? $_GET['sort'] : 'pct_return';
 
 $sortLabels = [
@@ -20,6 +20,7 @@ $sortLabels = [
     'xp'          => ['label' => 'Total XP',         'icon' => '⭐'],
     'level'       => ['label' => 'Level',            'icon' => '🏅'],
     'login_streak'=> ['label' => 'Login Streak',     'icon' => '🔥'],
+    'pvp_wins'    => ['label' => 'PvP Wins',         'icon' => '⚔'],
 ];
 
 // =========================================================================
@@ -31,38 +32,60 @@ $latestSnapshotDate = $db->fetchValue(
     "SELECT MAX(snapshot_date) FROM portfolio_snapshots"
 );
 
-// Build the main leaderboard query — join portfolio snapshots for % return
+// Build the main leaderboard query — join portfolio snapshots + pvp_stats
+$snapshotDate = $latestSnapshotDate ?: date('Y-m-d');
+
 if ($sort === 'pct_return') {
-    // Sort by portfolio return — players without a portfolio go to the bottom
     $allPlayers = $db->fetchAll(
         "SELECT
             ROW_NUMBER() OVER (ORDER BY COALESCE(ps.pct_return, -9999) DESC, u.xp DESC) AS position,
-            u.id AS user_id, u.username, u.class, u.`level`, u.xp,
-            u.login_streak,
-            ps.pct_return, ps.total_value_usd, ps.beats_index, ps.spx_pct_return
+            u.id AS user_id, u.username, u.class, u.`level`, u.xp, u.login_streak,
+            ps.pct_return, ps.total_value_usd, ps.beats_index, ps.spx_pct_return,
+            COALESCE(pv.wins, 0)   AS pvp_wins,
+            COALESCE(pv.losses, 0) AS pvp_losses,
+            COALESCE(pv.draws, 0)  AS pvp_draws
          FROM users u
-         LEFT JOIN portfolio_snapshots ps
-            ON ps.user_id = u.id AND ps.snapshot_date = ?
+         LEFT JOIN portfolio_snapshots ps ON ps.user_id = u.id AND ps.snapshot_date = ?
+         LEFT JOIN pvp_stats pv ON pv.user_id = u.id
          WHERE u.is_banned = 0
          ORDER BY COALESCE(ps.pct_return, -9999) DESC, u.xp DESC
          LIMIT 100",
-        [$latestSnapshotDate ?: date('Y-m-d')]
+        [$snapshotDate]
+    );
+} elseif ($sort === 'pvp_wins') {
+    $allPlayers = $db->fetchAll(
+        "SELECT
+            ROW_NUMBER() OVER (ORDER BY COALESCE(pv.wins, 0) DESC, u.xp DESC) AS position,
+            u.id AS user_id, u.username, u.class, u.`level`, u.xp, u.login_streak,
+            ps.pct_return, ps.total_value_usd, ps.beats_index, ps.spx_pct_return,
+            COALESCE(pv.wins, 0)   AS pvp_wins,
+            COALESCE(pv.losses, 0) AS pvp_losses,
+            COALESCE(pv.draws, 0)  AS pvp_draws
+         FROM users u
+         LEFT JOIN portfolio_snapshots ps ON ps.user_id = u.id AND ps.snapshot_date = ?
+         LEFT JOIN pvp_stats pv ON pv.user_id = u.id
+         WHERE u.is_banned = 0
+         ORDER BY COALESCE(pv.wins, 0) DESC, u.xp DESC
+         LIMIT 100",
+        [$snapshotDate]
     );
 } else {
     // Sort by a users table column
     $allPlayers = $db->fetchAll(
         "SELECT
             ROW_NUMBER() OVER (ORDER BY u.`{$sort}` DESC) AS position,
-            u.id AS user_id, u.username, u.class, u.`level`, u.xp,
-            u.login_streak,
-            ps.pct_return, ps.total_value_usd, ps.beats_index, ps.spx_pct_return
+            u.id AS user_id, u.username, u.class, u.`level`, u.xp, u.login_streak,
+            ps.pct_return, ps.total_value_usd, ps.beats_index, ps.spx_pct_return,
+            COALESCE(pv.wins, 0)   AS pvp_wins,
+            COALESCE(pv.losses, 0) AS pvp_losses,
+            COALESCE(pv.draws, 0)  AS pvp_draws
          FROM users u
-         LEFT JOIN portfolio_snapshots ps
-            ON ps.user_id = u.id AND ps.snapshot_date = ?
+         LEFT JOIN portfolio_snapshots ps ON ps.user_id = u.id AND ps.snapshot_date = ?
+         LEFT JOIN pvp_stats pv ON pv.user_id = u.id
          WHERE u.is_banned = 0
          ORDER BY u.`{$sort}` DESC
          LIMIT 100",
-        [$latestSnapshotDate ?: date('Y-m-d')]
+        [$snapshotDate]
     );
 }
 
@@ -108,6 +131,12 @@ $hallOfFame = [
     'login_streak' => $db->fetchOne(
         "SELECT username, login_streak AS val FROM users WHERE is_banned = 0
          ORDER BY login_streak DESC LIMIT 1"
+    ),
+    'pvp_wins'     => $db->fetchOne(
+        "SELECT u.username, pv.wins AS val
+         FROM pvp_stats pv JOIN users u ON u.id = pv.user_id
+         WHERE u.is_banned = 0
+         ORDER BY pv.wins DESC LIMIT 1"
     ),
 ];
 
@@ -162,6 +191,7 @@ ob_start();
             ['label' => 'Most XP',        'icon' => '⭐', 'key' => 'xp',           'fmt' => 'num'],
             ['label' => 'Most Adventures','icon' => '⚔',  'key' => 'adventures',   'fmt' => 'num'],
             ['label' => 'Most Devoted',   'icon' => '🔥', 'key' => 'login_streak', 'fmt' => 'days'],
+            ['label' => 'PvP Champion',   'icon' => '🗡️', 'key' => 'pvp_wins',     'fmt' => 'wins'],
         ];
         foreach ($fameItems as $fi):
             $hof = $hallOfFame[$fi['key']] ?? null;
@@ -170,6 +200,7 @@ ob_start();
                 'pct'   => (((float)$hof['val'] >= 0) ? '+' : '') . number_format((float)$hof['val'], 2) . '%',
                 'money' => money((float)$hof['val']),
                 'days'  => $hof['val'] . ' day' . ($hof['val'] != 1 ? 's' : ''),
+                'wins'  => $hof['val'] . ' win' . ($hof['val'] != 1 ? 's' : ''),
                 default => num((int)$hof['val']),
             };
         ?>
@@ -209,12 +240,15 @@ ob_start();
                     <th class="col-streak <?= $sort === 'login_streak' ? 'sorted' : '' ?>">
                         <a href="?sort=login_streak">🔥 Streak</a>
                     </th>
+                    <th class="col-pvp <?= $sort === 'pvp_wins' ? 'sorted' : '' ?>">
+                        <a href="?sort=pvp_wins">⚔ PvP</a>
+                    </th>
                 </tr>
             </thead>
             <tbody>
                 <?php if (empty($allPlayers)): ?>
                 <tr>
-                    <td colspan="6" class="lb-empty">
+                    <td colspan="7" class="lb-empty">
                         No adventurers yet. Be the first legend!
                     </td>
                 </tr>
@@ -256,6 +290,19 @@ ob_start();
                     </td>
                     <td class="col-streak <?= $sort === 'login_streak' ? 'sorted-col' : '' ?>">
                         <?= $row['login_streak'] > 0 ? $row['login_streak'] . 'd' : '—' ?>
+                    </td>
+                    <td class="col-pvp <?= $sort === 'pvp_wins' ? 'sorted-col' : '' ?>">
+                        <?php if ((int)$row['pvp_wins'] + (int)$row['pvp_losses'] + (int)$row['pvp_draws'] > 0): ?>
+                            <span class="pvp-record">
+                                <span style="color:var(--color-green)"><?= (int)$row['pvp_wins'] ?>W</span>
+                                <span class="text-dim">·</span>
+                                <span style="color:var(--color-red)"><?= (int)$row['pvp_losses'] ?>L</span>
+                                <span class="text-dim">·</span>
+                                <span style="color:#f59e0b"><?= (int)$row['pvp_draws'] ?>D</span>
+                            </span>
+                        <?php else: ?>
+                            <span class="text-muted" style="font-size:0.78rem;">—</span>
+                        <?php endif; ?>
                     </td>
                 </tr>
                 <?php endforeach; ?>

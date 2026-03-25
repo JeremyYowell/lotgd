@@ -494,3 +494,82 @@
     from { opacity: 0; transform: translateY(8px); }
     to   { opacity: 1; transform: translateY(0); }
 }
+
+/* -----------------------------------------------------------------------
+   DEBT DRAGON MINI-GAME
+----------------------------------------------------------------------- */
+.dragon-challenge-card {
+    margin-top: 1.5rem;
+    padding: 1.5rem 1.75rem;
+    background: linear-gradient(135deg, #1a0a0a, #1f0d0d);
+    border: 1px solid #7f1d1d;
+    border-radius: var(--radius-lg);
+    text-align: center;
+    animation: fadeIn 0.4s ease;
+    box-shadow: 0 0 20px rgba(239,68,68,0.08);
+}
+
+.dragon-challenge-card.dragon-used {
+    opacity: 0.5;
+    padding: 1rem 1.25rem;
+}
+
+.dragon-icon {
+    font-size: 2.5rem;
+    display: block;
+    margin-bottom: 0.65rem;
+    filter: drop-shadow(0 0 12px rgba(239,68,68,0.5));
+}
+
+.dragon-title {
+    font-family: var(--font-heading);
+    font-size: 1.1rem;
+    letter-spacing: 0.08em;
+    color: #fca5a5;
+    margin-bottom: 0.65rem;
+}
+
+.dragon-desc {
+    font-size: 0.9rem;
+    color: var(--color-text-muted);
+    max-width: 400px;
+    margin: 0 auto 0.5rem;
+    line-height: 1.6;
+}
+
+.dragon-hint {
+    font-family: var(--font-heading);
+    font-size: 0.7rem;
+    letter-spacing: 0.08em;
+    color: var(--color-text-dim);
+    text-transform: uppercase;
+}
+
+.dragon-btn {
+    background: linear-gradient(135deg, #7f1d1d, #991b1b);
+    border-color: #ef4444;
+    color: #fecaca;
+    font-family: var(--font-heading);
+    letter-spacing: 0.08em;
+    padding: 0.75rem 1.75rem;
+}
+
+.dragon-btn:hover {
+    background: linear-gradient(135deg, #991b1b, #b91c1c);
+    border-color: #fca5a5;
+    color: #fff;
+}
+
+.dragon-encounter {
+    border-color: #7f1d1d !important;
+    box-shadow: var(--shadow), 0 0 24px rgba(239,68,68,0.12) !important;
+}
+
+.dragon-choice-btn:hover {
+    border-color: #ef4444 !important;
+    background: rgba(239,68,68,0.06) !important;
+}
+
+.dragon-result {
+    border-color: #7f1d1d;
+}
