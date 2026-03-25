@@ -258,6 +258,7 @@ class Adventure {
             'gold_awarded'  => $xpResult['gold_awarded'] ?? 0,
             'choice_text'   => $choice['choice_text'],
             'scenario_title'=> $choice['scenario_title'],
+            'choice_id'     => $choiceId,
         ];
     }
 

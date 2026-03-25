@@ -48,7 +48,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
 
         if ($pvp->getActiveSession($userId)) {
-            Session::setFlash('error', 'You already have an active fight in progress.');
+            Session::setFlash('error', 'Please dismiss your current fight result before starting a new one.');
             redirect('/pages/pvp.php');
         }
 
@@ -88,13 +88,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 // HANDLE GET ?challenge= — pre-select a target from profile link
 // =========================================================================
 $preselect = null;
-if (!empty($_GET['challenge']) && !$_SERVER['REQUEST_METHOD'] === 'POST') {
-    $preselectId = (int)$_GET['challenge'];
+if (!empty($_GET['challenge']) && $_SERVER['REQUEST_METHOD'] !== 'POST') {
+    $preselectId  = (int)$_GET['challenge'];
     if ($preselectId && $preselectId !== $userId) {
-        $preselect = $userModel->findById($preselectId);
-        if ($preselect && (int)$preselect['level'] < (int)$user['level']) {
-            $preselect = null; // can't challenge lower level
-            Session::setFlash('error', 'You can only challenge players of equal or higher level.');
+        $preselectRow = $userModel->findById($preselectId);
+        if ($preselectRow && !$preselectRow['is_banned']) {
+            if ((int)$preselectRow['level'] < (int)$user['level']) {
+                Session::setFlash('error', 'You can only challenge players of equal or higher level.');
+            } else {
+                $preselect = $preselectRow;
+            }
         }
     }
 }
@@ -112,8 +115,23 @@ if ($session) {
     if ($session['state'] === 'active') {
         $state = 'fighting';
     } else {
-        $state    = 'result';
-        $finished = $session;
+        $state = 'result';
+        // Enrich session with data needed for result display
+        // Pull rounds and XP from the pvp_log row for this fight
+        $logRow = $db->fetchOne(
+            "SELECT pl.rounds, pl.challenger_xp, pl.defender_xp, ud.username AS defender_name
+             FROM pvp_log pl
+             JOIN users ud ON ud.id = pl.defender_id
+             WHERE pl.challenger_id = ?
+             ORDER BY pl.fought_at DESC LIMIT 1",
+            [$userId]
+        );
+        $finished = array_merge($session, [
+            'rounds'         => $logRow['rounds']       ?? 1,
+            'challenger_xp'  => $logRow['challenger_xp'] ?? 0,
+            'defender_xp'    => $logRow['defender_xp']   ?? 0,
+            'defender_name'  => $logRow['defender_name'] ?? ($defender['username'] ?? 'Unknown'),
+        ]);
     }
 }
 
@@ -314,50 +332,89 @@ ob_start();
          RESULT STATE
     ================================================================ -->
     <?php
-    $rl        = $resultLabels[$finished['result']] ?? $resultLabels['draw'];
-    $isWin     = $finished['result'] === 'challenger_win';
-    $challXp   = (int)$finished['challenger_xp'];
+    $rl      = $resultLabels[$finished['result']] ?? $resultLabels['draw'];
+    $isWin   = $finished['result'] === 'challenger_win';
+    $isDraw  = $finished['result'] === 'draw';
+    $isFled  = $finished['result'] === 'fled';
+    $challXp = (int)$finished['challenger_xp'];
+    $defName = $finished['defender_name'] ?? ($defender ? $defender['username'] : 'your opponent');
     ?>
-    <div class="pvp-result card">
-        <div class="pvp-result-badge" style="color:<?= $rl['color'] ?>;border-color:<?= $rl['color'] ?>">
-            <?= $rl['icon'] ?> <?= $rl['label'] ?>
+    <div class="pvp-result-wrap">
+
+        <div class="pvp-result-banner pvp-result-<?= $finished['result'] ?>">
+            <div class="pvp-result-icon"><?= $rl['icon'] ?></div>
+            <div class="pvp-result-title" style="color:<?= $rl['color'] ?>"><?= $rl['label'] ?></div>
+            <?php if ($isWin): ?>
+                <div class="pvp-result-subtitle">
+                    You defeated <strong><?= e($defName) ?></strong>
+                    in <?= (int)($finished['rounds'] ?? 1) ?> round<?= ($finished['rounds'] ?? 1) != 1 ? 's' : '' ?>!
+                </div>
+            <?php elseif ($isDraw): ?>
+                <div class="pvp-result-subtitle">
+                    You and <strong><?= e($defName) ?></strong> fought to exhaustion.
+                </div>
+            <?php elseif ($isFled): ?>
+                <div class="pvp-result-subtitle">
+                    You fled from <strong><?= e($defName) ?></strong>.
+                </div>
+            <?php else: ?>
+                <div class="pvp-result-subtitle">
+                    <strong><?= e($defName) ?></strong> bested you in combat.
+                </div>
+            <?php endif; ?>
         </div>
 
-        <?php if ($challXp > 0): ?>
-        <div class="pvp-result-xp">
-            +<?= $challXp ?> XP
+        <div class="pvp-result-rewards card">
+            <h3 class="pvp-section-title">⚔ Battle Rewards</h3>
+            <div class="pvp-reward-row">
+                <span class="pvp-reward-icon">⭐</span>
+                <span class="pvp-reward-label">Experience</span>
+                <span class="pvp-reward-val <?= $challXp > 0 ? 'text-gold' : 'text-muted' ?>">
+                    <?= $challXp > 0 ? '+' . num($challXp) . ' XP' : 'No XP earned' ?>
+                </span>
+            </div>
+            <div class="pvp-reward-row">
+                <span class="pvp-reward-icon">📜</span>
+                <span class="pvp-reward-label">Honor Record</span>
+                <span class="pvp-reward-val text-muted">
+                    <?= $myPvpStats['wins'] ?>W / <?= $myPvpStats['losses'] ?>L / <?= $myPvpStats['draws'] ?>D
+                </span>
+            </div>
         </div>
-        <?php endif; ?>
 
-        <!-- Full combat log -->
-        <div class="pvp-log card" style="margin:1.5rem 0">
+        <div class="pvp-log card">
             <h4 class="pvp-log-title">⚔ Full Combat Log</h4>
             <div class="pvp-log-body">
                 <?php
-                $logLines = array_filter(explode("\n", trim($finished['combat_log'])));
+                $logLines = array_filter(explode("
+", trim($finished['combat_log'])));
                 foreach ($logLines as $line):
                     $line = trim($line);
                     if (empty($line)) continue;
-                    $lineClass = str_contains($line, 'defeated') || str_contains($line, 'falls') ? 'log-defeat'
+                    $lc = (str_contains($line, 'victorious') || str_contains($line, 'wins') || str_contains($line, 'defeated') || str_contains($line, 'falls') || str_contains($line, 'draw') || str_contains($line, '═'))
+                        ? 'log-defeat'
                         : (str_contains($line, 'Hit!') ? 'log-hit'
                         : (str_contains($line, 'Miss!') ? 'log-miss'
-                        : (str_contains($line, 'Initiative') ? 'log-init' : '')));
+                        : (str_contains($line, 'Initiative') || str_contains($line, 'Round') || str_contains($line, 'Flee') ? 'log-init' : '')));
                 ?>
-                <div class="log-line <?= $lineClass ?>"><?= e($line) ?></div>
+                <div class="log-line <?= $lc ?>"><?= e($line) ?></div>
                 <?php endforeach; ?>
             </div>
         </div>
 
-        <form method="POST">
-            <?= Session::csrfField() ?>
-            <input type="hidden" name="action" value="dismiss">
-            <button type="submit" class="btn btn-primary">⚔ Return to Combat Grounds</button>
-        </form>
-        <a href="<?= BASE_URL ?>/pages/dashboard.php" class="btn btn-secondary" style="margin-left:0.5rem">
-            Dashboard
-        </a>
-    </div>
+        <div class="pvp-result-actions">
+            <form method="POST" style="display:inline">
+                <?= Session::csrfField() ?>
+                <input type="hidden" name="action" value="dismiss">
+                <button type="submit" class="btn btn-primary">⚔ Fight Again</button>
+            </form>
+            <a href="<?= BASE_URL ?>/pages/profile.php?user=<?= urlencode(Session::username()) ?>"
+               class="btn btn-secondary">My Profile</a>
+            <a href="<?= BASE_URL ?>/pages/dashboard.php"
+               class="btn btn-secondary">Dashboard</a>
+        </div>
 
+    </div>
     <?php else: ?>
     <!-- ================================================================
          IDLE STATE — target list + recent fights
@@ -420,8 +477,11 @@ ob_start();
                         $tStats = $pvp->getCombatantStats($target);
                         $tPvp   = $pvp->getStats((int)$target['id']);
                     ?>
-                    <div class="pvp-target-row <?= ($preselect && (int)$target['id'] === (int)$preselect['id']) ? 'pvp-target-highlighted' : '' ?>"
-                         <?= ($preselect && (int)$target['id'] === (int)$preselect['id']) ? 'id="pvp-preselect-target"' : '' ?>>
+                    <?php
+                    $isPreselected = $preselect && (int)$target['id'] === (int)$preselect['id'];
+                    ?>
+                    <div class="pvp-target-row <?= $isPreselected ? 'pvp-target-highlighted' : '' ?>"
+                         <?= $isPreselected ? 'id="pvp-preselect-target"' : '' ?>>
                         <div class="pvp-target-info">
                             <span class="pvp-target-icon"><?= $classIcons[$target['class']] ?? '⚔️' ?></span>
                             <div class="pvp-target-body">

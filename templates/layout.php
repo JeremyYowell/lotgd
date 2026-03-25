@@ -27,6 +27,18 @@
         <span class="nav-brand-text">LotGD</span>
     </a>
 
+    <button class="nav-hamburger" id="nav-hamburger" aria-label="Menu"
+            onclick="document.querySelector('.site-nav').classList.toggle('nav-open')">
+        <span></span><span></span><span></span>
+    </button>
+
+    <script>
+    // Close hamburger menu on scroll
+    window.addEventListener('scroll', function() {
+        document.querySelector('.site-nav').classList.remove('nav-open');
+    }, {passive: true});
+    </script>
+
     <?php if (Session::isLoggedIn()): ?>
     <div class="nav-links">
         <a href="<?= BASE_URL ?>/pages/dashboard.php">Dashboard</a>
@@ -34,7 +46,7 @@
         <a href="<?= BASE_URL ?>/pages/leaderboard.php">Leaderboard</a>
         <a href="<?= BASE_URL ?>/pages/tavern.php">Tavern</a>
         <a href="<?= BASE_URL ?>/pages/portfolio.php">Portfolio</a>
-        <a href="<?= BASE_URL ?>/pages/pvp.php">PvP</a>
+        <a href="<?= BASE_URL ?>/pages/store.php">Store</a>
         <?php if (Session::isAdmin()): ?>
         <a href="<?= BASE_URL ?>/admin/index.php" class="nav-admin">Admin</a>
         <?php endif; ?>

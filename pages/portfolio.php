@@ -377,10 +377,7 @@ ob_start();
                         <td class="lbm-pos">#<?= $row['position'] ?></td>
                         <td class="lbm-name">
                             <?= $classIcons[$row['class']] ?? '⚔️' ?>
-                            <a href="<?= BASE_URL ?>/pages/profile.php?user=<?= urlencode($row['username']) ?>"
-                               style="color:var(--color-gold-light);text-decoration:none">
-                                <?= e($row['username']) ?>
-                            </a>
+                            <?= e($row['username']) ?>
                             <?= $isMe ? '<span class="you-tag">you</span>' : '' ?>
                         </td>
                         <td class="lbm-ret <?= $ret >= 0 ? 'text-green' : 'text-red' ?>">
@@ -405,10 +402,7 @@ ob_start();
                         <td class="lbm-pos text-muted">💀</td>
                         <td class="lbm-name">
                             <?= $classIcons[$row['class']] ?? '⚔️' ?>
-                            <a href="<?= BASE_URL ?>/pages/profile.php?user=<?= urlencode($row['username']) ?>"
-                               style="color:var(--color-gold-light);text-decoration:none">
-                                <?= e($row['username']) ?>
-                            </a>
+                            <?= e($row['username']) ?>
                             <?= $isMe ? '<span class="you-tag">you</span>' : '' ?>
                         </td>
                         <td class="lbm-ret text-red"><?= number_format($ret, 2) ?>%</td>
@@ -479,7 +473,8 @@ $extraScripts = '<script>' . "\n"
     . '            .then(results => {' . "\n"
     . '                if (!results.length) { out.innerHTML = "<p class=\"text-muted\" style=\"font-size:0.85rem;padding:0.5rem\">No results.</p>"; return; }' . "\n"
     . '                out.innerHTML = results.map(s =>' . "\n"
-    . '                    "<div class=\"search-row\" onclick=\"document.getElementById(\'buy-ticker\').value=\'" + s.ticker + "\';switchTab(\'buy\')\">"' . "\n"
+    . '                    "<div class=\"search-row\""' . "\n"
+    . '                    + " onpointerdown=\"event.preventDefault();document.getElementById(\'buy-ticker\').value=\'" + s.ticker + "\';liveSearch(\'\');document.getElementById(\'search-results\').innerHTML=\'\';switchTab(\'buy\')\">"' . "\n"
     . '                    + "<strong>" + s.ticker + "</strong> "' . "\n"
     . '                    + "<span class=\"text-muted\">" + s.company_name + "</span>"' . "\n"
     . '                    + (s.latest_price ? " <span class=\"text-gold\">$" + parseFloat(s.latest_price).toFixed(2) + "</span>" : "")' . "\n"

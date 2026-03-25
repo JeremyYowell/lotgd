@@ -1,0 +1,102 @@
+/* ==========================================================================
+   VOICE MODE TOGGLE — pill switch
+   ========================================================================== */
+
+.voice-toggle-label {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    user-select: none;
+    font-size: 0.78rem;
+    color: var(--color-text-muted);
+}
+
+.voice-powered-link {
+    color: var(--color-text-dim);
+    text-decoration: none;
+    font-size: 0.7rem;
+}
+.voice-powered-link:hover { color: var(--color-text-muted); }
+
+/* ── Pill switch ─────────────────────────────────────────────────────────── */
+.voice-pill {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    width: 2.2rem;
+    height: 1.2rem;
+    border-radius: 999px;
+    background: var(--color-border);
+    border: 1px solid var(--color-border);
+    cursor: pointer;
+    transition: background 0.2s, border-color 0.2s;
+    flex-shrink: 0;
+    padding: 0;
+}
+
+.voice-pill:hover {
+    border-color: var(--color-text-dim);
+}
+
+.voice-pill-on {
+    background: var(--color-gold);
+    border-color: var(--color-gold);
+}
+
+.voice-pill-knob {
+    position: absolute;
+    left: 2px;
+    width: 0.85rem;
+    height: 0.85rem;
+    border-radius: 50%;
+    background: var(--color-text-dim);
+    transition: transform 0.2s, background 0.2s;
+}
+
+.voice-pill-on .voice-pill-knob {
+    transform: translateX(1rem);
+    background: var(--color-bg);
+}
+
+/* ── Stop button ─────────────────────────────────────────────────────────── */
+.voice-stop-btn {
+    background: rgba(239, 68, 68, 0.12);
+    border: 1px solid #7f1d1d;
+    color: #fca5a5;
+    border-radius: var(--radius);
+    font-size: 0.72rem;
+    font-family: var(--font-heading);
+    letter-spacing: 0.06em;
+    padding: 0.25rem 0.6rem;
+    cursor: pointer;
+    transition: background 0.15s;
+    white-space: nowrap;
+}
+.voice-stop-btn:hover {
+    background: rgba(239, 68, 68, 0.22);
+}
+
+/* ── Mobile ──────────────────────────────────────────────────────────────── */
+@media (max-width: 640px) {
+    #voice-toggle-wrap {
+        background: rgba(212, 160, 23, 0.06);
+        border: 1px solid var(--color-border-gold);
+        border-radius: var(--radius);
+        padding: 0.5rem 0.85rem;
+        font-size: 0.88rem;
+        width: 100%;
+        justify-content: space-between;
+    }
+
+    .voice-pill {
+        width: 2.6rem;
+        height: 1.4rem;
+    }
+    .voice-pill-knob {
+        width: 1rem;
+        height: 1rem;
+    }
+    .voice-pill-on .voice-pill-knob {
+        transform: translateX(1.15rem);
+    }
+}

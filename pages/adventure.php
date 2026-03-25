@@ -247,6 +247,24 @@ if ($advSession) {
 // =========================================================================
 $dailyState  = $userModel->getDailyState($userId);
 $actionLimit = (int)$db->getSetting('daily_action_limit', 10);
+$voiceMode   = (bool)($user['voice_mode'] ?? false);
+
+// Load audio file map for current scenario if in scenario/result state
+$audioMap = [];
+if ($advSession && in_array($state, ['scenario', 'result'])) {
+    $scenId = (int)($scenario['id'] ?? $advSession['scenario_id'] ?? 0);
+    if ($scenId) {
+        $audioRows = $db->fetchAll(
+            "SELECT audio_type, choice_id, file_path
+             FROM adventure_audio WHERE scenario_id = ?",
+            [$scenId]
+        );
+        foreach ($audioRows as $ar) {
+            $key = $ar['audio_type'] . '_' . ($ar['choice_id'] ?? 'null');
+            $audioMap[$key] = BASE_URL . '/' . $ar['file_path'];
+        }
+    }
+}
 
 $recentLog = [];
 if ($state === 'idle') {
@@ -274,7 +292,7 @@ $outcomeLabels = [
 // =========================================================================
 $pageTitle = 'Go Adventuring';
 $bodyClass = 'page-adventure';
-$extraCss  = ['adventure.css'];
+$extraCss  = ['adventure.css', 'voice_toggle.css'];
 
 ob_start();
 ?>
@@ -286,11 +304,35 @@ ob_start();
             <h1>⚔ Go Adventuring</h1>
             <p class="text-muted">Face the financial challenges of the real world. Fortune favors the prepared.</p>
         </div>
-        <div class="adv-actions-badge">
-            <span class="adv-actions-label">Actions Today</span>
-            <span class="adv-actions-val <?= $dailyState['actions_remaining'] <= 0 ? 'text-red' : 'text-gold' ?>">
-                <?= $dailyState['actions_remaining'] ?> / <?= $actionLimit ?>
-            </span>
+        <div style="display:flex;flex-direction:column;align-items:flex-end;gap:0.5rem">
+            <div class="adv-actions-badge">
+                <span class="adv-actions-label">Actions Today</span>
+                <span class="adv-actions-val <?= $dailyState['actions_remaining'] <= 0 ? 'text-red' : 'text-gold' ?>">
+                    <?= $dailyState['actions_remaining'] ?> / <?= $actionLimit ?>
+                </span>
+            </div>
+            <label class="voice-toggle-label" id="voice-toggle-wrap">
+                <span class="voice-toggle-text">
+                    🔊 Voice ·
+                    <a href="https://elevenlabs.io" target="_blank" rel="noopener"
+                       class="voice-powered-link"
+                       onclick="event.stopPropagation()">
+                        Powered by ElevenLabs ↗
+                    </a>
+                </span>
+                <button type="button" id="voice-mode-btn"
+                        class="voice-pill <?= $voiceMode ? 'voice-pill-on' : '' ?>"
+                        onclick="toggleVoiceMode(this)"
+                        aria-pressed="<?= $voiceMode ? 'true' : 'false' ?>">
+                    <span class="voice-pill-knob"></span>
+                </button>
+            </label>
+            <button type="button" id="voice-stop-btn"
+                    onclick="stopAudio()"
+                    style="display:none"
+                    class="voice-stop-btn" title="Stop narration">
+                ⏹ Stop
+            </button>
         </div>
     </div>
 
@@ -393,7 +435,8 @@ ob_start();
         <p class="encounter-flavor">"<?= e($scenario['flavor_text']) ?>"</p>
         <?php endif; ?>
 
-        <p class="encounter-desc"><?= nl2br(e($scenario['description'])) ?></p>
+        <p class="encounter-desc" id="adv-scene-desc"
+           data-audio="<?= e($audioMap['title_desc_null'] ?? '') ?>"><?= nl2br(e($scenario['description'])) ?></p>
 
         <div class="encounter-modifier-hint">
             Your modifier: <strong class="text-gold">+<?= $totalMod ?></strong>
@@ -406,12 +449,15 @@ ob_start();
         </div>
 
         <div class="encounter-choices">
-            <?php foreach ($choices as $choice): ?>
+            <?php foreach ($choices as $choiceIdx => $choice):
+                $choiceAudioKey = 'choice_text_' . $choice['id'];
+            ?>
             <form method="POST" class="choice-form">
                 <?= Session::csrfField() ?>
                 <input type="hidden" name="action"    value="choose">
                 <input type="hidden" name="choice_id" value="<?= (int)$choice['id'] ?>">
-                <button type="submit" class="choice-btn">
+                <button type="submit" class="choice-btn"
+                        data-audio="<?= e($audioMap[$choiceAudioKey] ?? '') ?>">
                     <span class="choice-text"><?= e($choice['choice_text']) ?></span>
                     <?php if (!empty($choice['hint_text'])): ?>
                     <span class="choice-hint"><?= e($choice['hint_text']) ?></span>
@@ -454,7 +500,17 @@ ob_start();
             </div>
         </div>
 
-        <div class="result-narrative">
+        <?php
+        // Build audio key for this outcome
+        $outcomeTypeMap = ['crit_success'=>'crit_success','success'=>'success',
+                           'failure'=>'failure','crit_failure'=>'crit_failure'];
+        $resultAudioType = $outcomeTypeMap[$result['outcome']] ?? '';
+        $resultChoiceId  = $result['choice_id'] ?? null;
+        $resultAudioKey  = $resultAudioType . '_' . ($resultChoiceId ?? 'null');
+        $resultAudioUrl  = $audioMap[$resultAudioKey] ?? '';
+        ?>
+        <div class="result-narrative" id="adv-result-narrative"
+             data-audio="<?= e($resultAudioUrl) ?>">
             <?= nl2br(e($result['narrative'])) ?>
         </div>
 
@@ -532,5 +588,111 @@ ob_start();
 
 <?php
 $pageContent = ob_get_clean();
+
+$extraScripts = '<script>
+var VOICE_MODE     = ' . ($voiceMode ? 'true' : 'false') . ';
+var CSRF_TOKEN     = ' . json_encode($_SESSION['csrf_token'] ?? '') . ';
+var VOICE_MODE_URL = ' . json_encode(BASE_URL . '/api/voice_mode.php') . ';
+var currentAudio   = null; // track playing audio so we can stop it
+
+// ── Toggle pill ────────────────────────────────────────────────────────────
+function toggleVoiceMode(btn) {
+    VOICE_MODE = !VOICE_MODE;
+    btn.classList.toggle("voice-pill-on", VOICE_MODE);
+    btn.setAttribute("aria-pressed", VOICE_MODE ? "true" : "false");
+    if (!VOICE_MODE) {
+        stopAudio();
+    } else {
+        // Trigger playback immediately when turned on
+        var desc = document.getElementById("adv-scene-desc");
+        var narr = document.getElementById("adv-result-narrative");
+        if (narr) {
+            playAudio(narr.getAttribute("data-audio"), null);
+        } else if (desc) {
+            var titleUrl = desc.getAttribute("data-audio");
+            var choiceUrls = Array.from(document.querySelectorAll(".choice-btn[data-audio]"))
+                               .map(function(b){ return b.getAttribute("data-audio"); })
+                               .filter(function(u){ return u; });
+            var step = 0;
+            function playNext() {
+                if (step < choiceUrls.length) { playAudio(choiceUrls[step], playNext); step++; }
+            }
+            if (titleUrl) { playAudio(titleUrl, playNext); } else { playNext(); }
+        }
+    }
+    var form = new FormData();
+    form.append("enabled", VOICE_MODE ? "1" : "0");
+    form.append("csrf_token", CSRF_TOKEN);
+    fetch(VOICE_MODE_URL, {method:"POST", body:form}).catch(function(){});
+}
+
+// ── Stop current audio ─────────────────────────────────────────────────────
+function stopAudio() {
+    if (currentAudio) {
+        currentAudio.pause();
+        currentAudio.currentTime = 0;
+        currentAudio = null;
+    }
+    var stopBtn = document.getElementById("voice-stop-btn");
+    if (stopBtn) stopBtn.style.display = "none";
+}
+
+// ── Play an audio URL ──────────────────────────────────────────────────────
+function playAudio(url, onEnd) {
+    if (!VOICE_MODE || !url) { if (onEnd) onEnd(); return null; }
+    stopAudio(); // stop anything already playing
+    var a = new Audio(url);
+    currentAudio = a;
+    var stopBtn = document.getElementById("voice-stop-btn");
+    if (stopBtn) stopBtn.style.display = "";
+    a.addEventListener("ended", function() {
+        currentAudio = null;
+        if (stopBtn) stopBtn.style.display = "none";
+        if (onEnd) onEnd();
+    });
+    a.addEventListener("error", function() {
+        currentAudio = null;
+        if (stopBtn) stopBtn.style.display = "none";
+        if (onEnd) onEnd();
+    });
+    a.play().catch(function() {
+        currentAudio = null;
+        if (stopBtn) stopBtn.style.display = "none";
+        if (onEnd) onEnd();
+    });
+    return a;
+}
+
+// ── On scenario screen: auto-play title/desc, then choices sequentially ────
+document.addEventListener("DOMContentLoaded", function() {
+    var desc = document.getElementById("adv-scene-desc");
+    if (desc) {
+        var titleUrl = desc.getAttribute("data-audio");
+        var choices  = Array.from(document.querySelectorAll(".choice-btn[data-audio]"))
+                           .map(function(b){ return b.getAttribute("data-audio"); })
+                           .filter(function(u){ return u; });
+        var step = 0;
+        function playNext() {
+            if (step < choices.length) {
+                playAudio(choices[step], playNext);
+                step++;
+            }
+        }
+        if (titleUrl) {
+            playAudio(titleUrl, playNext);
+        } else {
+            playNext();
+        }
+    }
+
+    // ── On result screen: auto-play outcome narrative ──────────────────────
+    var narr = document.getElementById("adv-result-narrative");
+    if (narr) {
+        var narrativeUrl = narr.getAttribute("data-audio");
+        playAudio(narrativeUrl, null);
+    }
+});
+</script>';
+
 require TPL_PATH . '/layout.php';
 ?>

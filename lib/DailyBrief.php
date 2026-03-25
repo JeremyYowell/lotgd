@@ -259,6 +259,27 @@ PROMPT;
             "SELECT COUNT(*) FROM users WHERE is_banned = 0"
         );
 
+        // PvP activity yesterday
+        $pvpStats = $this->db->fetchOne(
+            "SELECT
+                COUNT(*) AS total_fights,
+                SUM(CASE WHEN result = 'challenger_win' THEN 1 ELSE 0 END) AS decisive,
+                SUM(CASE WHEN result = 'draw' THEN 1 ELSE 0 END) AS draws,
+                SUM(CASE WHEN result = 'fled' THEN 1 ELSE 0 END) AS fled
+             FROM pvp_log
+             WHERE DATE(fought_at) = ?",
+            [$yesterday]
+        );
+
+        // Most decorated PvP warrior (most wins all time)
+        $pvpChampion = $this->db->fetchOne(
+            "SELECT u.username, ps.wins, ps.losses
+             FROM pvp_stats ps
+             JOIN users u ON u.id = ps.user_id
+             WHERE ps.wins > 0
+             ORDER BY ps.wins DESC LIMIT 1"
+        );
+
         return [
             'adventures'          => (int)($advStats['total_adventures'] ?? 0),
             'wins'                => (int)($advStats['wins'] ?? 0),
@@ -271,6 +292,11 @@ PROMPT;
             'tavern_star'         => $tavernStar,
             'big_purchase'        => $bigPurchase,
             'total_players'       => $totalPlayers,
+            'pvp_fights'          => (int)($pvpStats['total_fights'] ?? 0),
+            'pvp_decisive'        => (int)($pvpStats['decisive'] ?? 0),
+            'pvp_draws'           => (int)($pvpStats['draws'] ?? 0),
+            'pvp_fled'            => (int)($pvpStats['fled'] ?? 0),
+            'pvp_champion'        => $pvpChampion,
         ];
     }
 
@@ -333,6 +359,8 @@ PROMPT;
             $rd['achievements_awarded'] > 0 ? "Achievements awarded: {$rd['achievements_awarded']}" : '',
             $rd['top_achievement'] ? "Most notable achievement: {$rd['top_achievement']['username']} earned \"{$rd['top_achievement']['achievement_name']}\"" : '',
             $rd['portfolio_leader'] ? "Portfolio leaderboard leader: {$rd['portfolio_leader']['username']} at +" . number_format((float)$rd['portfolio_leader']['pct_return'], 2) . '% return' : '',
+            $rd['pvp_fights'] > 0 ? "PvP battles yesterday: {$rd['pvp_fights']} total ({$rd['pvp_decisive']} decisive victories, {$rd['pvp_draws']} draws, {$rd['pvp_fled']} fled)" : '',
+            $rd['pvp_champion'] ? "Current realm combat champion: {$rd['pvp_champion']['username']} with {$rd['pvp_champion']['wins']} victories" : '',
             $rd['tavern_star'] ? "Most active tavern poster: {$rd['tavern_star']['username']} with {$rd['tavern_star']['posts']} posts" : '',
             $rd['big_purchase'] ? "Biggest store purchase: {$rd['big_purchase']['username']} bought {$rd['big_purchase']['item_name']} for {$rd['big_purchase']['price']} Gold" : '',
             "Total realm population: {$rd['total_players']} adventurers",

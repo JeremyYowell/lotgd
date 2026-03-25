@@ -3,40 +3,24 @@
  * lib/Pvp.php — PvP Combat Engine
  *
  * Combat model:
- *   - Up to 10 rounds per fight
- *   - Each round: initiative roll (d20 + modifier) determines who attacks first
- *   - Attacker rolls d20 + attack_mod vs defender's d20 + defense_mod
- *   - If attacker roll > defender roll → hit → deal damage
- *   - Damage = rand(3, 8) + weapon_bonus
- *   - Defender auto-counterattacks in same round (if still alive)
- *   - Challenger may choose to Flee instead of attacking
- *   - Fight ends: one side reaches 0 HP, flee succeeds, or 10 rounds elapsed (draw)
- *
- * Stats:
- *   HP:             Base 20 + armor_hp_bonus
- *   Attack mod:     floor(level/5) + weapon_roll_bonus + class_pvp_bonus
- *   Defense mod:    floor(level/5) + armor_roll_bonus
- *   Damage:         rand(3,8) + weapon_damage_bonus
- *   Flee DC:        12 — roll d20 + floor(level/5) to escape
+ *   - Initiative rolled ONCE at fight start, stored in pvp_sessions.initiative_order
+ *   - Each Attack press = one "round" — attack/counter until a HIT lands on either side
+ *     (misses are resolved automatically, no extra button presses needed)
+ *   - Each round ends after the first hit or after both sides have attacked once (all miss)
+ *   - Up to MAX_ROUNDS rounds per fight
+ *   - Flee: roll d20 + modifier vs DC 12
  */
 class Pvp {
 
     private Database $db;
 
-    // XP rewards
-    const XP_WIN   = 50;
-    const XP_DRAW  = 15;
-    const XP_LOSS  = 5;
-    const XP_FLEE  = 0;
-
-    // XP bonus per level difference (attacker beating higher-level defender)
-    const XP_LEVEL_BONUS = 10;
-
-    // Max rounds before draw
-    const MAX_ROUNDS = 10;
-
-    // Flee DC
-    const FLEE_DC = 12;
+    const XP_WIN        = 50;
+    const XP_DRAW       = 15;
+    const XP_LOSS       = 5;
+    const XP_FLEE       = 0;
+    const XP_LEVEL_BONUS= 10;
+    const MAX_ROUNDS    = 10;
+    const FLEE_DC       = 12;
 
     public function __construct() {
         $this->db = Database::getInstance();
@@ -46,10 +30,6 @@ class Pvp {
     // PUBLIC — QUERY HELPERS
     // =========================================================================
 
-    /**
-     * Get list of challengeable players (same level or higher, not banned,
-     * not already challenged today by this user, not self).
-     */
     public function getChallengeableTargets(int $challengerId, int $challengerLevel): array {
         $today = date('Y-m-d');
         return $this->db->fetchAll(
@@ -71,43 +51,27 @@ class Pvp {
         );
     }
 
-    /**
-     * Check if this challenger already fought this defender today.
-     */
     public function alreadyFoughtToday(int $challengerId, int $defenderId): bool {
-        $count = (int)$this->db->fetchValue(
+        return (int)$this->db->fetchValue(
             "SELECT COUNT(*) FROM pvp_log
              WHERE challenger_id = ? AND defender_id = ? AND DATE(fought_at) = CURDATE()",
             [$challengerId, $defenderId]
-        );
-        return $count > 0;
+        ) > 0;
     }
 
-    /**
-     * Get active session for this challenger, or null.
-     */
     public function getActiveSession(int $challengerId): ?array {
         $row = $this->db->fetchOne(
-            "SELECT * FROM pvp_sessions WHERE challenger_id = ? AND state = 'active'",
+            "SELECT * FROM pvp_sessions WHERE challenger_id = ?",
             [$challengerId]
         );
         return $row ?: null;
     }
 
-    /**
-     * Get PvP stats for a user.
-     */
     public function getStats(int $userId): array {
-        $row = $this->db->fetchOne(
-            "SELECT * FROM pvp_stats WHERE user_id = ?",
-            [$userId]
-        );
+        $row = $this->db->fetchOne("SELECT * FROM pvp_stats WHERE user_id = ?", [$userId]);
         return $row ?: ['wins' => 0, 'losses' => 0, 'draws' => 0, 'fled' => 0, 'xp_earned' => 0];
     }
 
-    /**
-     * Get recent PvP fight history for a user (as challenger or defender).
-     */
     public function getRecentFights(int $userId, int $limit = 10): array {
         return $this->db->fetchAll(
             "SELECT pl.*,
@@ -128,10 +92,9 @@ class Pvp {
     // =========================================================================
 
     /**
-     * Start a new fight. Returns the initial session state.
+     * Start a new fight. Rolls initiative once and stores it.
      */
     public function startFight(array $challenger, array $defender): array {
-        // Clear any stale session for this challenger
         $this->db->run(
             "DELETE FROM pvp_sessions WHERE challenger_id = ?",
             [$challenger['id']]
@@ -140,15 +103,29 @@ class Pvp {
         $challMaxHp = $this->calcMaxHp($challenger);
         $defMaxHp   = $this->calcMaxHp($defender);
 
+        // Roll initiative ONCE — determines attack order for the entire fight
+        $challInit = rand(1, 20) + $this->calcAttackMod($challenger);
+        $defInit   = rand(1, 20) + $this->calcAttackMod($defender);
+        $initiative = $challInit >= $defInit ? 'challenger' : 'defender';
+
+        $initLog = "[Initiative] {$challenger['username']}: {$challInit} vs "
+                 . "{$defender['username']}: {$defInit}. "
+                 . ($initiative === 'challenger'
+                    ? "{$challenger['username']} has the initiative for this battle!"
+                    : "{$defender['username']} has the initiative for this battle!");
+
         $this->db->run(
             "INSERT INTO pvp_sessions
-             (challenger_id, defender_id, round, challenger_hp, defender_hp,
-              max_challenger_hp, max_defender_hp, combat_log, state)
-             VALUES (?, ?, 1, ?, ?, ?, ?, '', 'active')",
+             (challenger_id, defender_id, round, initiative_order,
+              challenger_hp, defender_hp, max_challenger_hp, max_defender_hp,
+              combat_log, state)
+             VALUES (?, ?, 1, ?, ?, ?, ?, ?, ?, 'active')",
             [
                 $challenger['id'], $defender['id'],
+                $initiative,
                 $challMaxHp, $defMaxHp,
                 $challMaxHp, $defMaxHp,
+                $initLog,
             ]
         );
 
@@ -156,8 +133,13 @@ class Pvp {
     }
 
     /**
-     * Execute one round: challenger attacks.
-     * Returns updated session with combat_log appended.
+     * Execute one round of combat.
+     *
+     * A "round" = one press of the Attack button.
+     * We resolve attacks in initiative order. The round continues resolving
+     * until a hit lands on either side, then stops so the player can see
+     * the result and decide to attack again or flee.
+     * If both sides miss entirely, we still advance the round counter.
      */
     public function doAttack(int $challengerId): array {
         $session    = $this->getActiveSession($challengerId);
@@ -168,16 +150,40 @@ class Pvp {
         $challenger = $this->db->fetchOne("SELECT * FROM users WHERE id = ?", [$challengerId]);
         $defender   = $this->db->fetchOne("SELECT * FROM users WHERE id = ?", [$session['defender_id']]);
 
-        $challHp = (int)$session['challenger_hp'];
-        $defHp   = (int)$session['defender_hp'];
-        $round   = (int)$session['round'];
-        $log     = $session['combat_log'];
+        $challHp    = (int)$session['challenger_hp'];
+        $defHp      = (int)$session['defender_hp'];
+        $round      = (int)$session['round'];
+        $log        = $session['combat_log'];
+        $initiative = $session['initiative_order'] ?? 'challenger';
 
-        $roundLog = $this->resolveRound($challenger, $defender, $challHp, $defHp, false);
+        $roundLog = "\n--- Round {$round} ---";
 
-        $challHp = $roundLog['challenger_hp'];
-        $defHp   = $roundLog['defender_hp'];
-        $log    .= $roundLog['log'];
+        // Determine attack order from stored initiative
+        $challGoesFirst = ($initiative === 'challenger');
+
+        if ($challGoesFirst) {
+            // Challenger attacks
+            [$challHp, $defHp, $log1, $hit1] = $this->resolveAttack($challenger, $defender, $challHp, $defHp);
+            $roundLog .= $log1;
+
+            // Defender counterattacks (only if still alive, and only if no hit yet — 
+            // we always let both sides attack once per round regardless of hit)
+            if ($defHp > 0) {
+                [$defHp, $challHp, $log2, $hit2] = $this->resolveAttack($defender, $challenger, $defHp, $challHp);
+                $roundLog .= $log2;
+            }
+        } else {
+            // Defender attacks first
+            [$defHp, $challHp, $log1, $hit1] = $this->resolveAttack($defender, $challenger, $defHp, $challHp);
+            $roundLog .= $log1;
+
+            if ($challHp > 0) {
+                [$challHp, $defHp, $log2, $hit2] = $this->resolveAttack($challenger, $defender, $challHp, $defHp);
+                $roundLog .= $log2;
+            }
+        }
+
+        $log .= $roundLog;
 
         // Check end conditions
         $finished = false;
@@ -191,14 +197,13 @@ class Pvp {
             $result = 'defender_win'; $finished = true;
         } elseif ($round >= self::MAX_ROUNDS) {
             $result = 'draw'; $finished = true;
-            $log   .= "\n[Round {$round}] The fight has gone on too long — both adventurers collapse in exhaustion. Draw!";
+            $log   .= "\n\nThe battle has raged for {$round} rounds — both fighters are exhausted. Draw!";
         }
 
         if ($finished) {
             return $this->finishFight($session, $challenger, $defender, $challHp, $defHp, $result, $log, $round);
         }
 
-        // Advance round
         $this->db->run(
             "UPDATE pvp_sessions
              SET round = ?, challenger_hp = ?, defender_hp = ?, combat_log = ?
@@ -206,7 +211,7 @@ class Pvp {
             [$round + 1, $challHp, $defHp, $log, $challengerId]
         );
 
-        return $this->getActiveSession($challengerId) + ['round_log' => $roundLog['log'], 'finished' => false];
+        return $this->getActiveSession($challengerId) + ['finished' => false];
     }
 
     /**
@@ -224,28 +229,25 @@ class Pvp {
         $fleeMod  = (int)floor($challenger['level'] / 5);
         $fleeRoll = rand(1, 20) + $fleeMod;
         $log      = $session['combat_log'];
+        $challHp  = (int)$session['challenger_hp'];
+        $defHp    = (int)$session['defender_hp'];
 
-        $log .= "\n[Round {$session['round']}] {$challenger['username']} attempts to flee! ";
-        $log .= "Flee roll: {$fleeRoll} vs DC " . self::FLEE_DC . ". ";
+        $log .= "\n--- Flee Attempt ---";
+        $log .= "\n{$challenger['username']} attempts to flee! Roll: {$fleeRoll} vs DC " . self::FLEE_DC . ". ";
 
         if ($fleeRoll >= self::FLEE_DC) {
             $log .= "{$challenger['username']} escapes!";
             return $this->finishFight(
                 $session, $challenger, $defender,
-                (int)$session['challenger_hp'], (int)$session['defender_hp'],
-                'fled', $log, (int)$session['round']
+                $challHp, $defHp, 'fled', $log, (int)$session['round']
             );
         }
 
         // Flee failed — defender gets a free hit
         $log .= "Failed! {$defender['username']} lands a free strike!";
-        $challHp = (int)$session['challenger_hp'];
-        $defHp   = (int)$session['defender_hp'];
-
-        $damage   = $this->calcDamage($defender);
-        $challHp  = max(0, $challHp - $damage);
-        $log     .= " {$defender['username']} deals {$damage} damage. "
-                  . "{$challenger['username']} has {$challHp} HP remaining.";
+        $damage  = $this->calcDamage($defender);
+        $challHp = max(0, $challHp - $damage);
+        $log    .= "\n  {$defender['username']} deals {$damage} damage. {$challenger['username']} has {$challHp} HP.";
 
         if ($challHp <= 0) {
             $log .= " {$challenger['username']} falls!";
@@ -255,15 +257,14 @@ class Pvp {
             );
         }
 
-        $round = (int)$session['round'] + 1;
         $this->db->run(
             "UPDATE pvp_sessions
-             SET round = ?, challenger_hp = ?, combat_log = ?
+             SET round = round + 1, challenger_hp = ?, combat_log = ?
              WHERE challenger_id = ?",
-            [$round, $challHp, $log, $challengerId]
+            [$challHp, $log, $challengerId]
         );
 
-        return $this->getActiveSession($challengerId) + ['round_log' => $log, 'finished' => false, 'flee_failed' => true];
+        return $this->getActiveSession($challengerId) + ['finished' => false, 'flee_failed' => true];
     }
 
     // =========================================================================
@@ -271,65 +272,27 @@ class Pvp {
     // =========================================================================
 
     /**
-     * Resolve one full round of combat (initiative → first attack → counterattack).
-     * Modifies $challHp and $defHp by reference indirectly via return.
-     */
-    private function resolveRound(array $chall, array $def, int $challHp, int $defHp, bool $isFlee): array {
-        $round = ''; // log for this round
-
-        // Initiative
-        $challInit = rand(1, 20) + $this->calcAttackMod($chall);
-        $defInit   = rand(1, 20) + $this->calcAttackMod($def);
-
-        $challGoesFirst = $challInit >= $defInit; // challenger wins ties
-
-        $round .= "\n[Initiative] {$chall['username']}: {$challInit} vs {$def['username']}: {$defInit}. ";
-        $round .= $challGoesFirst
-            ? "{$chall['username']} strikes first!"
-            : "{$def['username']} strikes first!";
-
-        // Execute in initiative order
-        if ($challGoesFirst) {
-            [$challHp, $defHp, $log1] = $this->resolveAttack($chall, $def, $challHp, $defHp);
-            $round .= $log1;
-            if ($defHp > 0) {
-                [$defHp, $challHp, $log2] = $this->resolveAttack($def, $chall, $defHp, $challHp);
-                $round .= $log2;
-            }
-        } else {
-            [$defHp, $challHp, $log1] = $this->resolveAttack($def, $chall, $defHp, $challHp);
-            $round .= $log1;
-            if ($challHp > 0) {
-                [$challHp, $defHp, $log2] = $this->resolveAttack($chall, $def, $challHp, $defHp);
-                $round .= $log2;
-            }
-        }
-
-        return [
-            'challenger_hp' => $challHp,
-            'defender_hp'   => $defHp,
-            'log'           => $round,
-        ];
-    }
-
-    /**
-     * One attack: attacker rolls vs defender. Returns [attacker_hp, defender_hp, log].
+     * Resolve one attack.
+     * Returns [attacker_hp, defender_hp, log, hit_landed].
+     * $atkHp is passed through unchanged (attacker HP doesn't change from attacking).
      */
     private function resolveAttack(array $attacker, array $defender, int $atkHp, int $defHp): array {
         $atkRoll = rand(1, 20) + $this->calcAttackMod($attacker);
         $defRoll = rand(1, 20) + $this->calcDefenseMod($defender);
         $log     = "\n  {$attacker['username']} attacks ({$atkRoll}) vs {$defender['username']} defends ({$defRoll}). ";
+        $hit     = false;
 
         if ($atkRoll > $defRoll) {
             $dmg   = $this->calcDamage($attacker);
             $defHp = max(0, $defHp - $dmg);
             $log  .= "Hit! {$dmg} damage. {$defender['username']} has {$defHp} HP.";
             if ($defHp <= 0) $log .= " {$defender['username']} is defeated!";
+            $hit = true;
         } else {
             $log .= "Miss!";
         }
 
-        return [$atkHp, $defHp, $log];
+        return [$atkHp, $defHp, $log, $hit];
     }
 
     /**
@@ -339,47 +302,43 @@ class Pvp {
         array $session, array $chall, array $def,
         int $challHp, int $defHp, string $result, string $log, int $rounds
     ): array {
-        // Calculate XP
-        $levelDiff   = max(0, (int)$def['level'] - (int)$chall['level']);
-        $challXp     = 0;
-        $defXp       = 0;
+        $levelDiff = max(0, (int)$def['level'] - (int)$chall['level']);
+        $challXp   = 0;
+        $defXp     = 0;
 
+        $log .= "\n\n═══════════════════════════";
         switch ($result) {
             case 'challenger_win':
                 $challXp = self::XP_WIN + ($levelDiff * self::XP_LEVEL_BONUS);
                 $defXp   = self::XP_LOSS;
-                $log    .= "\n\n{$chall['username']} is victorious! +"  . $challXp . " XP.";
+                $log    .= "\n{$chall['username']} is victorious after {$rounds} round" . ($rounds !== 1 ? 's' : '') . "!";
+                $log    .= "\n+{$challXp} XP awarded.";
                 break;
             case 'defender_win':
                 $defXp   = self::XP_WIN;
                 $challXp = self::XP_LOSS;
-                $log    .= "\n\n{$def['username']} wins! +" . $defXp . " XP.";
+                $log    .= "\n{$def['username']} wins after {$rounds} round" . ($rounds !== 1 ? 's' : '') . "!";
+                $log    .= "\n+{$defXp} XP awarded to {$def['username']}.";
                 break;
             case 'draw':
                 $challXp = self::XP_DRAW;
                 $defXp   = self::XP_DRAW;
-                $log    .= "\n\nDraw! Both adventurers earn +" . self::XP_DRAW . " XP.";
+                $log    .= "\nThe battle ends in a draw after {$rounds} round" . ($rounds !== 1 ? 's' : '') . "!";
+                $log    .= "\n+" . self::XP_DRAW . " XP awarded to both fighters.";
                 break;
             case 'fled':
                 $challXp = self::XP_FLEE;
-                $defXp   = self::XP_LOSS; // defender gets minimal XP for opponent fleeing
-                $log    .= "\n\n{$chall['username']} fled. No XP earned.";
+                $defXp   = self::XP_LOSS;
+                $log    .= "\n{$chall['username']} fled the battle. No XP earned.";
                 break;
         }
+        $log .= "\n═══════════════════════════";
 
         $this->db->beginTransaction();
         try {
-            // Award XP
-            if ($challXp > 0) {
-                $userModel = new User();
-                $userModel->awardXp((int)$chall['id'], $challXp);
-            }
-            if ($defXp > 0) {
-                $userModel = new User();
-                $userModel->awardXp((int)$def['id'], $defXp);
-            }
+            if ($challXp > 0) (new User())->awardXp((int)$chall['id'], $challXp);
+            if ($defXp > 0)   (new User())->awardXp((int)$def['id'],   $defXp);
 
-            // Write pvp_log
             $this->db->run(
                 "INSERT INTO pvp_log
                  (challenger_id, defender_id, result, rounds, challenger_xp, defender_xp, combat_log)
@@ -387,7 +346,6 @@ class Pvp {
                 [$chall['id'], $def['id'], $result, $rounds, $challXp, $defXp, $log]
             );
 
-            // Update pvp_stats for challenger
             $challStatCol = match($result) {
                 'challenger_win' => 'wins',
                 'defender_win'   => 'losses',
@@ -402,12 +360,11 @@ class Pvp {
                 [$chall['id'], $challXp, $challXp]
             );
 
-            // Update pvp_stats for defender
             $defStatCol = match($result) {
                 'challenger_win' => 'losses',
                 'defender_win'   => 'wins',
                 'draw'           => 'draws',
-                'fled'           => 'wins', // defender wins if challenger flees
+                'fled'           => 'wins',
             };
             $this->db->run(
                 "INSERT INTO pvp_stats (user_id, {$defStatCol}, xp_earned)
@@ -417,7 +374,6 @@ class Pvp {
                 [$def['id'], $defXp, $defXp]
             );
 
-            // Mark session finished
             $this->db->run(
                 "UPDATE pvp_sessions
                  SET state = 'finished', result = ?, challenger_hp = ?, defender_hp = ?,
@@ -433,16 +389,18 @@ class Pvp {
         }
 
         return [
-            'finished'       => true,
-            'result'         => $result,
-            'challenger_hp'  => $challHp,
-            'defender_hp'    => $defHp,
-            'challenger_xp'  => $challXp,
-            'defender_xp'    => $defXp,
-            'combat_log'     => $log,
-            'rounds'         => $rounds,
-            'challenger_name'=> $chall['username'],
-            'defender_name'  => $def['username'],
+            'finished'        => true,
+            'result'          => $result,
+            'challenger_hp'   => $challHp,
+            'defender_hp'     => $defHp,
+            'max_challenger_hp'=> (int)$session['max_challenger_hp'],
+            'max_defender_hp'  => (int)$session['max_defender_hp'],
+            'challenger_xp'   => $challXp,
+            'defender_xp'     => $defXp,
+            'combat_log'      => $log,
+            'rounds'          => $rounds,
+            'challenger_name' => $chall['username'],
+            'defender_name'   => $def['username'],
         ];
     }
 
@@ -451,16 +409,13 @@ class Pvp {
     // =========================================================================
 
     private function calcMaxHp(array $user): int {
-        // Base HP from level (20 + (level-1) * 2)
-        $baseHp = User::maxHpForLevel((int)$user['level']);
-        // Armor bonus on top
+        $level      = max(1, (int)$user['level']);
+        $baseHp     = 20 + ($level - 1) * 2;
         $store      = new Store();
         $equipped   = $store->getEquipped((int)$user['id']);
         $armorBonus = 0;
-        if (isset($equipped['armor'])) {
-            if ($equipped['armor']['effect_type'] === 'failure_reduction') {
-                $armorBonus = (int)round((1 - (float)$equipped['armor']['effect_value']) * 10);
-            }
+        if (isset($equipped['armor']) && $equipped['armor']['effect_type'] === 'failure_reduction') {
+            $armorBonus = (int)round((1 - (float)$equipped['armor']['effect_value']) * 10);
         }
         return $baseHp + $armorBonus;
     }
@@ -468,48 +423,33 @@ class Pvp {
     private function calcAttackMod(array $user): int {
         $store    = new Store();
         $equipped = $store->getEquipped((int)$user['id']);
-        $weaponBonus = 0;
-        if (isset($equipped['weapon'])) {
-            if ($equipped['weapon']['effect_type'] === 'xp_boost') {
-                $weaponBonus = 2; // weapons give +2 attack
-            }
-        }
-        return (int)floor($user['level'] / 5) + $weaponBonus;
+        $bonus    = (isset($equipped['weapon']) && $equipped['weapon']['effect_type'] === 'xp_boost') ? 2 : 0;
+        return (int)floor($user['level'] / 5) + $bonus;
     }
 
     private function calcDefenseMod(array $user): int {
         $store    = new Store();
         $equipped = $store->getEquipped((int)$user['id']);
-        $armorBonus = 0;
-        if (isset($equipped['armor'])) {
-            $armorBonus = 2; // any armor gives +2 defense
-        }
-        return (int)floor($user['level'] / 5) + $armorBonus;
+        $bonus    = isset($equipped['armor']) ? 2 : 0;
+        return (int)floor($user['level'] / 5) + $bonus;
     }
 
     private function calcDamage(array $user): int {
         $store    = new Store();
         $equipped = $store->getEquipped((int)$user['id']);
-        $bonus = 0;
-        if (isset($equipped['weapon'])) {
-            $bonus = (int)$equipped['weapon']['effect_value'];
-        }
+        $bonus    = isset($equipped['weapon']) ? (int)$equipped['weapon']['effect_value'] : 0;
         return rand(3, 8) + $bonus;
     }
 
-    /**
-     * Build a display-friendly stats block for a combatant.
-     */
     public function getCombatantStats(array $user): array {
+        $store    = new Store();
+        $equipped = $store->getEquipped((int)$user['id']);
+        $wpnBonus = isset($equipped['weapon']) ? (int)$equipped['weapon']['effect_value'] : 0;
         return [
             'max_hp'      => $this->calcMaxHp($user),
             'attack_mod'  => $this->calcAttackMod($user),
             'defense_mod' => $this->calcDefenseMod($user),
-            'damage_range'=> (3 + 0) . '–' . (8 + (function() use ($user) {
-                $store    = new Store();
-                $equipped = $store->getEquipped((int)$user['id']);
-                return isset($equipped['weapon']) ? (int)$equipped['weapon']['effect_value'] : 0;
-            })()),
+            'damage_range'=> '3–' . (8 + $wpnBonus),
         ];
     }
 }
