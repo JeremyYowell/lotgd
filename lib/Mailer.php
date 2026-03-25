@@ -55,6 +55,24 @@ class Mailer {
         return $this->send($toEmail, $subject, $html);
     }
 
+    public function sendPasswordReset(string $toEmail, string $username, string $token): bool {
+        $resetUrl = BASE_URL . '/pages/reset_password.php?token=' . urlencode($token);
+        $subject  = 'Reset your Legends of the Green Dollar passphrase';
+
+        $html = $this->wrapHtml($subject, $this->confirmationContent(
+            "Reset Your Passphrase",
+            "You requested a passphrase reset for your adventurer account <strong>"
+                . htmlspecialchars($username) . "</strong>. "
+                . "Click the button below to choose a new passphrase.",
+            $resetUrl,
+            "Reset My Passphrase",
+            "This link expires in 1 hour. If you did not request a reset, "
+                . "you can safely ignore this email — your passphrase will not change."
+        ));
+
+        return $this->send($toEmail, $subject, $html);
+    }
+
     public function sendConfirmationResend(string $toEmail, string $username, string $token): bool {
         $confirmUrl = BASE_URL . '/pages/confirm_email.php?token=' . urlencode($token);
         $expHours   = Database::getInstance()->getSetting('email_confirm_token_hours', 48);

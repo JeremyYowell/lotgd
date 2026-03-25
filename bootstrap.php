@@ -66,6 +66,8 @@ if ($confirmationEnabled && Session::isLoggedIn()) {
     $exemptPages = [
         'confirm_email.php',
         'confirm_required.php',
+        'forgot_password.php',
+        'reset_password.php',
         'logout.php',
         'login.php',
         'register.php',
@@ -74,14 +76,13 @@ if ($confirmationEnabled && Session::isLoggedIn()) {
     $currentPage = basename($_SERVER['SCRIPT_FILENAME'] ?? '');
 
     if (!in_array($currentPage, $exemptPages)) {
-        $confirmed = Session::get('email_confirmed', null);
-        if ($confirmed === null) {
-            $confirmed = (bool) $db->fetchValue(
-                "SELECT email_confirmed FROM users WHERE id = ?",
-                [Session::userId()]
-            );
-            Session::set('email_confirmed', $confirmed);
-        }
+        // Always query DB — never cache in session.
+        // Caching caused admin manual-confirms to be ignored until the user
+        // explicitly logged out and back in.
+        $confirmed = (bool) $db->fetchValue(
+            "SELECT email_confirmed FROM users WHERE id = ?",
+            [Session::userId()]
+        );
 
         if (!$confirmed) {
             Session::redirect('/pages/confirm_required.php');

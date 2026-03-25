@@ -92,8 +92,7 @@ PROMPT;
         $json   = $this->callClaude($prompt);
 
         if (!$json) {
-            appLog('error', 'DailyBrief: Claude call failed');
-            return false;
+            return false; // specific error already logged by callClaude()
         }
 
         // -----------------------------------------------------------------------
@@ -401,11 +400,22 @@ PROMPT;
             ],
         ]);
 
-        $raw  = curl_exec($ch);
-        $code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        $raw      = curl_exec($ch);
+        $code     = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        $curlErr  = curl_error($ch);
         curl_close($ch);
 
-        if (!$raw || $code !== 200) return null;
+        if (!$raw) {
+            appLog('error', 'DailyBrief: Claude HTTP request failed — ' . ($curlErr ?: 'empty response'));
+            return null;
+        }
+
+        if ($code !== 200) {
+            // Log the API error body (truncated) so we can diagnose rate limits, bad keys, etc.
+            $snippet = substr(strip_tags($raw), 0, 300);
+            appLog('error', "DailyBrief: Claude API returned HTTP {$code} — {$snippet}");
+            return null;
+        }
 
         $response = json_decode($raw, true);
         $text     = '';
@@ -413,12 +423,22 @@ PROMPT;
             if ($block['type'] === 'text') $text .= $block['text'];
         }
 
+        if (empty($text)) {
+            $stopReason = $response['stop_reason'] ?? 'unknown';
+            appLog('error', "DailyBrief: Claude returned empty content (stop_reason={$stopReason})");
+            return null;
+        }
+
         // Strip markdown fences if present
         $text = preg_replace('/^```(?:json)?\s*/m', '', trim($text));
         $text = preg_replace('/\s*```$/m', '', $text);
 
         $parsed = json_decode(trim($text), true);
-        if (!is_array($parsed)) return null;
+        if (!is_array($parsed)) {
+            $snippet = substr($text, 0, 200);
+            appLog('error', "DailyBrief: Claude response was not valid JSON — raw: {$snippet}");
+            return null;
+        }
 
         return $parsed;
     }

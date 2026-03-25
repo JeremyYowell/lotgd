@@ -77,7 +77,7 @@ class Portfolio {
     public function getHoldings(int $userId): array {
         return $this->db->fetchAll(
             "SELECT h.*,
-                    s.company_name, s.sector,
+                    s.company_name, s.sector, s.exchange,
                     sp.close_price AS current_price,
                     sp.price_date  AS price_as_of,
                     ROUND(h.shares * sp.close_price, 4)                        AS current_value_usd,
@@ -456,7 +456,7 @@ class Portfolio {
     public function searchStocks(string $query, int $limit = 10): array {
         $q = '%' . $query . '%';
         return $this->db->fetchAll(
-            "SELECT ticker, company_name, sector
+            "SELECT ticker, company_name, sector, exchange
              FROM stocks
              WHERE is_active = 1
                AND (ticker LIKE ? OR company_name LIKE ?)

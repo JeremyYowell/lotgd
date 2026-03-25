@@ -3,7 +3,12 @@
 /**
  * cron/price_update.php — Hourly price download
  * ================================================
- * Pulls latest prices for all S&P 500 tickers + SPY (benchmark) from Finnhub.
+ * Pulls latest prices for all active stocks and SPY benchmark.
+ *
+ * Data sources (split by exchange):
+ *   SP500 + SPY  → Finnhub free tier  (60 calls/minute, US stocks only)
+ *   TSX60        → Yahoo Finance v8   (no API key, free, supports .TO tickers)
+ *
  * Safe to run every hour — uses ON DUPLICATE KEY UPDATE so re-runs
  * on the same calendar date simply refresh the price data.
  *
@@ -15,7 +20,7 @@
  * or via the admin panel.
  *
  * Finnhub free tier: 60 calls/minute.
- * ~501 tickers takes ~9 minutes. Running hourly keeps data fresh
+ * ~501 US tickers takes ~9 minutes. Running hourly keeps data fresh
  * throughout the trading day without hammering the API.
  */
 
@@ -32,36 +37,55 @@ if (!$apiKey || $apiKey === 'YOUR_KEY_HERE') {
 }
 
 // ---------------------------------------------------------------------------
-// Get ticker list (active S&P 500 + SPY as benchmark)
+// Get ticker list, split by data source
 // ---------------------------------------------------------------------------
-$tickers    = $db->fetchAll("SELECT ticker FROM stocks WHERE is_active = 1 ORDER BY ticker");
-$tickerList = array_column($tickers, 'ticker');
-// SPY (S&P 500 ETF) is used as the index benchmark.
-// ^GSPC requires a Finnhub paid subscription; SPY is available on the free tier
-// and tracks the index almost perfectly.
-if (!in_array('SPY', $tickerList)) {
-    $tickerList[] = 'SPY';
+$tickers = $db->fetchAll("SELECT ticker, exchange FROM stocks WHERE is_active = 1 ORDER BY ticker");
+
+// Build exchange map for per-exchange logging
+$exchangeMap = [];
+foreach ($tickers as $row) {
+    $exchangeMap[$row['ticker']] = $row['exchange'];
+}
+$exchangeMap['SPY'] = 'BENCHMARK';
+
+// Split into Finnhub group (SP500 + SPY) and Yahoo group (TSX60)
+$finnhubTickers = array_column(
+    array_filter($tickers, fn($r) => $r['exchange'] === 'SP500'),
+    'ticker'
+);
+// SPY benchmark — always via Finnhub
+if (!in_array('SPY', $finnhubTickers)) {
+    $finnhubTickers[] = 'SPY';
 }
 
-$total       = count($tickerList);
+$yahooTickers = array_column(
+    array_filter($tickers, fn($r) => $r['exchange'] === 'TSX60'),
+    'ticker'
+);
+
+$usCount = count($finnhubTickers) - 1; // minus SPY
+$caCount = count($yahooTickers);
+$total   = count($finnhubTickers) + $caCount;
+
 $success     = 0;
 $skipped     = 0;
 $failed      = 0;
+
+cronLog('INFO', "Starting hourly price update for {$total} tickers (US/SP500={$usCount}, CA/TSX60={$caCount}, +SPY benchmark).");
+
+// ---------------------------------------------------------------------------
+// SECTION 1 — Finnhub (SP500 + SPY) — rate limit to 55 calls/minute
+// ---------------------------------------------------------------------------
 $callCount   = 0;
 $minuteStart = microtime(true);
 
-cronLog('INFO', "Starting hourly price update for {$total} tickers (run at {$hour}:00).");
-
-// ---------------------------------------------------------------------------
-// Pull prices — rate limit to 55 calls/minute
-// ---------------------------------------------------------------------------
-foreach ($tickerList as $ticker) {
+foreach ($finnhubTickers as $ticker) {
     $callCount++;
     if ($callCount % 55 === 0) {
         $elapsed = microtime(true) - $minuteStart;
         if ($elapsed < 60) {
             $sleep = (int)ceil(60 - $elapsed) + 2;
-            cronLog('INFO', "Rate limit pause: {$sleep}s after {$callCount} calls.");
+            cronLog('INFO', "Rate limit pause: {$sleep}s after {$callCount} Finnhub calls.");
             sleep($sleep);
         }
         $minuteStart = microtime(true);
@@ -70,7 +94,8 @@ foreach ($tickerList as $ticker) {
     $price = finnhubQuote($ticker, $apiKey);
 
     if ($price === false) {
-        cronLog('WARN', "No data for {$ticker}");
+        $exch = $exchangeMap[$ticker] ?? '?';
+        cronLog('WARN', "No data for {$ticker} [{$exch}]");
         $failed++;
         continue;
     }
@@ -80,7 +105,6 @@ foreach ($tickerList as $ticker) {
         continue;
     }
 
-    // ON DUPLICATE KEY UPDATE — safe to run multiple times per day
     $db->run(
         "INSERT INTO stock_prices (ticker, price_date, close_price)
          VALUES (?, ?, ?)
@@ -88,6 +112,49 @@ foreach ($tickerList as $ticker) {
         [$ticker, $today, $price]
     );
     $success++;
+}
+
+cronLog('INFO', "Finnhub pass complete: {$callCount} calls.");
+
+// ---------------------------------------------------------------------------
+// SECTION 2 — Yahoo Finance (TSX60) — courtesy delay between calls
+// ---------------------------------------------------------------------------
+if (!empty($yahooTickers)) {
+    cronLog('INFO', "Starting Yahoo Finance pass for {$caCount} TSX60 tickers.");
+    $yaSuccess = 0;
+    $yaFailed  = 0;
+
+    foreach ($yahooTickers as $i => $ticker) {
+        // Small courtesy delay — 200ms between calls
+        if ($i > 0) {
+            usleep(200000);
+        }
+
+        $price = yahooQuote($ticker);
+
+        if ($price === false) {
+            cronLog('WARN', "No data for {$ticker} [TSX60]");
+            $failed++;
+            $yaFailed++;
+            continue;
+        }
+
+        if ($price <= 0) {
+            $skipped++;
+            continue;
+        }
+
+        $db->run(
+            "INSERT INTO stock_prices (ticker, price_date, close_price)
+             VALUES (?, ?, ?)
+             ON DUPLICATE KEY UPDATE close_price = VALUES(close_price)",
+            [$ticker, $today, $price]
+        );
+        $success++;
+        $yaSuccess++;
+    }
+
+    cronLog('INFO', "Yahoo Finance pass complete: {$yaSuccess} ok / {$yaFailed} failed.");
 }
 
 // ---------------------------------------------------------------------------
@@ -152,12 +219,16 @@ if (isLastBusinessDayOfMonth()) {
 $db->setSetting('portfolio_last_price_update', date('Y-m-d H:i:s'));
 
 $elapsed = round(microtime(true) - $startTime, 1);
-cronLog('INFO', "Done in {$elapsed}s — prices: {$success} ok / {$skipped} zero / {$failed} failed. Snapshots: {$snapshots}.");
+cronLog('INFO', "Done in {$elapsed}s — prices: {$success} ok / {$skipped} zero / {$failed} failed (of {$total} tickers: {$usCount} SP500 + {$caCount} TSX60 + 1 SPY). Snapshots: {$snapshots}.");
 
 // ---------------------------------------------------------------------------
 // HELPERS
 // ---------------------------------------------------------------------------
 
+/**
+ * Fetch previous close from Finnhub (US stocks, free tier).
+ * Returns price as float, or false on any failure.
+ */
 function finnhubQuote(string $ticker, string $apiKey): float|false {
     $url = 'https://finnhub.io/api/v1/quote?symbol='
          . urlencode($ticker) . '&token=' . urlencode($apiKey);
@@ -176,6 +247,42 @@ function finnhubQuote(string $ticker, string $apiKey): float|false {
     $data = json_decode($raw, true);
     if (!$data || !isset($data['pc'])) return false;
     return (float)$data['pc'];
+}
+
+/**
+ * Fetch previous close from Yahoo Finance v8 (Canadian .TO tickers, free).
+ * Uses chartPreviousClose from the meta object.
+ * Returns price as float, or false on any failure.
+ */
+function yahooQuote(string $ticker): float|false {
+    $url = 'https://query1.finance.yahoo.com/v8/finance/chart/'
+         . urlencode($ticker) . '?interval=1d&range=1d';
+
+    $ch = curl_init($url);
+    curl_setopt_array($ch, [
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_TIMEOUT        => 10,
+        CURLOPT_FOLLOWLOCATION => true,
+        CURLOPT_HTTPHEADER     => [
+            'Accept: application/json',
+            'User-Agent: Mozilla/5.0 (compatible; LotGD-PriceBot/1.0)',
+        ],
+    ]);
+    $raw  = curl_exec($ch);
+    $code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    curl_close($ch);
+
+    if (!$raw || $code !== 200) return false;
+    $data = json_decode($raw, true);
+
+    // chart.result[0].meta.chartPreviousClose
+    $price = $data['chart']['result'][0]['meta']['chartPreviousClose'] ?? null;
+    if ($price === null) {
+        // Fallback: regularMarketPreviousClose
+        $price = $data['chart']['result'][0]['meta']['regularMarketPreviousClose'] ?? null;
+    }
+    if ($price === null) return false;
+    return (float)$price;
 }
 
 function isLastBusinessDayOfMonth(): bool {

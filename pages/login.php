@@ -121,6 +121,13 @@ ob_start();
                     ⚔ Enter the Realm
                 </button>
             </div>
+
+            <div class="text-center mt-2">
+                <a href="<?= BASE_URL ?>/pages/forgot_password.php"
+                   style="font-size:0.82rem;color:var(--color-text-muted)">
+                    Forgot your passphrase?
+                </a>
+            </div>
         </form>
 
         <div class="auth-divider">or</div>

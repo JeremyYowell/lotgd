@@ -285,14 +285,112 @@ class Pvp {
         if ($atkRoll > $defRoll) {
             $dmg   = $this->calcDamage($attacker);
             $defHp = max(0, $defHp - $dmg);
-            $log  .= "Hit! {$dmg} damage. {$defender['username']} has {$defHp} HP.";
+            $flavor = $this->getHitFlavor($attacker, $defender);
+            $log  .= "Hit! {$flavor} ({$dmg} damage — {$defender['username']} has {$defHp} HP)";
             if ($defHp <= 0) $log .= " {$defender['username']} is defeated!";
             $hit = true;
         } else {
-            $log .= "Miss!";
+            $flavor = $this->getMissFlavor($attacker, $defender);
+            $log .= "Miss! {$flavor}";
         }
 
         return [$atkHp, $defHp, $log, $hit];
+    }
+
+    /**
+     * Return a class-themed flavor string for a landed hit.
+     */
+    private function getHitFlavor(array $attacker, array $defender): string {
+        $a = $attacker['username'];
+        $d = $defender['username'];
+
+        $pool = match($attacker['class'] ?? '') {
+            'investor' => [
+                "{$a} deploys a 30-year compound interest projection",
+                "{$a} slaps {$d} with a perfectly diversified index fund portfolio",
+                "{$a} weaponizes the Rule of 72",
+                "{$a} cites their year-to-date returns and it stings",
+                "{$a} summons the power of low-cost index funds",
+            ],
+            'debt_slayer' => [
+                "{$a} pulls out {$d}'s credit history report — it is not pretty",
+                "{$a} flourishes a laminated debt payoff chart",
+                "{$a} summons the Debt Avalanche and it lands with full force",
+                "{$a} deploys a flawless 800 credit score directly at {$d}",
+                "{$a} hits {$d} with a fully paid-off car title",
+            ],
+            'saver' => [
+                "{$a} rubs a 70% savings rate right in {$d}'s face",
+                "{$a} brandishes a thrift store find — paid \$4, worth \$40",
+                "{$a} presents {$d} with a fully funded 6-month emergency fund",
+                "{$a} shows {$d} their coupon binder — it is devastating",
+                "{$a} sells a refurbished curb-pickup lamp for pure profit",
+            ],
+            'entrepreneur' => [
+                "{$a} flips a refurbished curb-pickup couch for a fat profit and channels it",
+                "{$a} announces a well-timed promotion with a raise — the flex is lethal",
+                "{$a} drops a side hustle P&L statement on {$d}",
+                "{$a} closes a client deal worth more than {$d}'s monthly budget",
+                "{$a} hits {$d} with a fully automated income stream",
+            ],
+            'minimalist' => [
+                "{$a} strikes {$d} with a zero-based budget so tight it cuts deep",
+                "{$a} owns only 43 possessions — one of them just hit {$d}",
+                "{$a} cancels {$d}'s streaming subscriptions mid-battle",
+                "{$a} channels pure intentional living into a devastating blow",
+                "{$a} hits {$d} with a lifestyle so lean it has no drag",
+            ],
+            default => [
+                "{$a} lands a decisive financial blow on {$d}",
+                "{$a} strikes with surprising fiscal discipline",
+                "{$a} channels their money wisdom into a powerful hit",
+            ],
+        };
+
+        return $pool[array_rand($pool)];
+    }
+
+    /**
+     * Return a class-themed flavor string for a missed attack.
+     */
+    private function getMissFlavor(array $attacker, array $defender): string {
+        $a = $attacker['username'];
+        $d = $defender['username'];
+
+        $pool = match($attacker['class'] ?? '') {
+            'investor' => [
+                "{$a}'s market timing attempt fails spectacularly.",
+                "{$a} tries to explain expense ratios — {$d} doesn't care.",
+                "{$a}'s hot stock tip doesn't pan out.",
+            ],
+            'debt_slayer' => [
+                "{$a} waves the debt payoff chart but {$d} already paid theirs off.",
+                "{$a}'s credit score recitation misses the mark.",
+                "{$a}'s balance transfer offer is declined.",
+            ],
+            'saver' => [
+                "{$a}'s frugal finesse fails to connect.",
+                "{$a}'s coupon expires at the critical moment.",
+                "{$a} reaches for the emergency fund but hesitates.",
+            ],
+            'entrepreneur' => [
+                "{$a}'s pitch deck fails to impress.",
+                "{$a}'s side hustle stalls at the worst time.",
+                "{$a}'s revenue projections turn out to be optimistic.",
+            ],
+            'minimalist' => [
+                "{$a} brings too little force — minimalism has its limits.",
+                "{$a} reaches for a weapon but already decluttered it.",
+                "{$a}'s intentional stillness is a little too still.",
+            ],
+            default => [
+                "{$a}'s attack goes wide.",
+                "{$d} sidesteps the attempt.",
+                "{$a} overreaches and misses.",
+            ],
+        };
+
+        return $pool[array_rand($pool)];
     }
 
     /**

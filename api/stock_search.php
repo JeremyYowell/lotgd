@@ -18,11 +18,12 @@ if (strlen($q) < 1) {
 $portfolio = new Portfolio();
 $results   = $portfolio->searchStocks($q, 8);
 
-// Attach latest price to each result
+// Attach latest price and country flag to each result
 foreach ($results as &$r) {
     $price = $portfolio->getLatestPrice($r['ticker']);
     $r['latest_price']  = $price ? $price['close_price'] : null;
     $r['price_date']    = $price ? $price['price_date']  : null;
+    $r['flag']          = ($r['exchange'] === 'TSX60') ? '🇨🇦' : '🇺🇸';
 }
 
 echo json_encode(array_values($results));

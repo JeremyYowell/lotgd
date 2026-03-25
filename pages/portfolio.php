@@ -207,7 +207,12 @@ ob_start();
                                 $ret = (float)$h['position_pct_return'];
                             ?>
                             <tr>
-                                <td class="ticker-cell"><strong><?= e($h['ticker']) ?></strong></td>
+                                <td class="ticker-cell">
+                                    <?php if (($h['exchange'] ?? '') === 'TSX60'): ?>
+                                        <span title="Toronto Stock Exchange">🇨🇦</span>
+                                    <?php endif; ?>
+                                    <strong><?= e($h['ticker']) ?></strong>
+                                </td>
                                 <td class="company-cell text-muted"><?= e($h['company_name']) ?></td>
                                 <td class="text-right"><?= rtrim(rtrim(number_format((float)$h['shares'], 6), '0'), '.') ?></td>
                                 <td class="text-right text-muted">$<?= number_format((float)$h['avg_cost_basis'], 2) ?></td>
@@ -475,9 +480,10 @@ $extraScripts = '<script>' . "\n"
     . '                out.innerHTML = results.map(s =>' . "\n"
     . '                    "<div class=\"search-row\""' . "\n"
     . '                    + " onpointerdown=\"event.preventDefault();document.getElementById(\'buy-ticker\').value=\'" + s.ticker + "\';liveSearch(\'\');document.getElementById(\'search-results\').innerHTML=\'\';switchTab(\'buy\')\">"' . "\n"
+    . '                    + (s.flag ? "<span style=\\"margin-right:0.3em\\">" + s.flag + "</span>" : "")' . "\n"
     . '                    + "<strong>" + s.ticker + "</strong> "' . "\n"
-    . '                    + "<span class=\"text-muted\">" + s.company_name + "</span>"' . "\n"
-    . '                    + (s.latest_price ? " <span class=\"text-gold\">$" + parseFloat(s.latest_price).toFixed(2) + "</span>" : "")' . "\n"
+    . '                    + "<span class=\\"text-muted\\">" + s.company_name + "</span>"' . "\n"
+    . '                    + (s.latest_price ? " <span class=\\"text-gold\\">$" + parseFloat(s.latest_price).toFixed(2) + (s.exchange === "TSX60" ? " CAD" : "") + "</span>" : "")' . "\n"
     . '                    + "</div>"' . "\n"
     . '                ).join("");' . "\n"
     . '            })' . "\n"
