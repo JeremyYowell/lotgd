@@ -36,10 +36,31 @@ class Session {
         session_start();
         self::$started = true;
 
-        // Regenerate session ID periodically to prevent fixation
+        // Regenerate session ID on first request to prevent session fixation.
         if (!isset($_SESSION['_initiated'])) {
             session_regenerate_id(true);
             $_SESSION['_initiated'] = true;
+        }
+
+        // Sliding window: refresh the cookie expiry on every request so the
+        // session doesn't expire while the user is actively using the app.
+        // Without this, the cookie expires SESSION_LIFETIME seconds after the
+        // original login regardless of activity — killing long play sessions.
+        if (!empty($_SESSION['logged_in'])) {
+            setcookie(
+                session_name(),
+                session_id(),
+                [
+                    'expires'  => time() + SESSION_LIFETIME,
+                    'path'     => '/',
+                    'domain'   => '',
+                    'secure'   => IS_PROD,
+                    'httponly' => true,
+                    'samesite' => 'Lax',
+                ]
+            );
+            // Bump last activity timestamp for the server-side inactivity check.
+            $_SESSION['last_activity_at'] = time();
         }
     }
 

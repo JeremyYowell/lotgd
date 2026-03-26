@@ -248,24 +248,34 @@ class Store {
             return ['success' => false, 'error' => 'You do not have that item.'];
         }
 
-        // Check reroll daily limit
+        // reroll_once: daily cooldown tracked in DB — scroll is NOT consumed on use
         if ($inv['effect_type'] === 'reroll_once') {
-            $usedToday = (int) $this->db->fetchValue(
-                "SELECT COUNT(*) FROM adventure_log
-                 WHERE user_id = ? AND DATE(adventured_at) = CURDATE()
-                   AND outcome IN ('success','crit_success')
-                   AND adventured_at = (
-                       SELECT MAX(adventured_at) FROM adventure_log WHERE user_id = ?
-                   )",
-                [$userId, $userId]
-            );
-            // Check session flag for reroll used today
-            if (Session::get('reroll_used_' . date('Y-m-d'), false)) {
-                return ['success' => false, 'error' => 'You can only use one Second Chance Scroll per day.'];
+            // Ensure daily_state row exists (getDailyState creates it if absent)
+            $userModel  = new User();
+            $dailyState = $userModel->getDailyState($userId);
+
+            if (!empty($dailyState['reroll_used_scroll'])) {
+                return ['success' => false, 'error' => 'You can only use one Second Chance Scroll per day. Return at dawn.'];
             }
+
+            // Mark used in daily_state (row guaranteed to exist from getDailyState above)
+            $this->db->run(
+                "UPDATE daily_state SET reroll_used_scroll = 1
+                 WHERE user_id = ? AND state_date = CURDATE()",
+                [$userId]
+            );
+
+            // Return success WITHOUT deducting from inventory — scroll stays in satchel
+            return [
+                'success'      => true,
+                'error'        => null,
+                'effect_type'  => 'reroll_once',
+                'effect_value' => 0,
+                'item_name'    => $inv['name'],
+            ];
         }
 
-        // Deduct from inventory
+        // All other consumables: deduct from inventory
         if ($inv['quantity'] > 1) {
             $this->db->run(
                 "UPDATE user_inventory SET quantity = quantity - 1 WHERE id = ?",

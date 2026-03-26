@@ -48,8 +48,22 @@
         <a href="<?= BASE_URL ?>/pages/portfolio.php">Portfolio</a>
         <a href="<?= BASE_URL ?>/pages/store.php">Store</a>
         <a href="<?= BASE_URL ?>/pages/pvp.php">PvP</a>
-        <?php if (Session::isAdmin()): ?>
-        <a href="<?= BASE_URL ?>/admin/index.php" class="nav-admin">Admin</a>
+        <?php if (Session::isAdmin()):
+            // Alert badge: open bug reports + unhealthy crons
+            try {
+                $openBugs = (int) $db->fetchValue("SELECT COUNT(*) FROM bug_reports WHERE status = 'open'");
+            } catch (Throwable $e) {
+                $openBugs = 0; // table may not exist yet on this environment
+            }
+            $lastPrice   = $db->getSetting('portfolio_last_price_update', '');
+            $cronStale   = $lastPrice && (time() - strtotime($lastPrice)) > 7200
+                           && date('N') <= 5  // weekday only
+                           && (int)date('G') >= 10 && (int)date('G') <= 18;
+            $alertCount  = $openBugs + ($cronStale ? 1 : 0);
+        ?>
+        <a href="<?= BASE_URL ?>/admin/index.php" class="nav-admin">
+            Admin<?php if ($alertCount > 0): ?><span class="nav-alert-badge"><?= $alertCount ?></span><?php endif; ?>
+        </a>
         <?php endif; ?>
     </div>
     <div class="nav-user">
@@ -80,6 +94,9 @@
     <p>
         Legends of the Green Dollar &nbsp;·&nbsp;
         <?= IS_DEV ? '<span class="env-tag">' . APP_ENV . '</span>' : '&copy; ' . date('Y') ?>
+        <?php if (Session::isLoggedIn()): ?>
+        &nbsp;·&nbsp; <a href="<?= BASE_URL ?>/pages/bug_report.php" class="footer-bug-link">🐛 Report a Bug</a>
+        <?php endif; ?>
     </p>
 </footer>
 

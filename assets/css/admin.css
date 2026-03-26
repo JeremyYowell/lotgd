@@ -95,7 +95,31 @@
     transform: translateY(-2px);
 }
 
-.anc-icon  { font-size: 2rem; }
+.admin-nav-card.anc-alert {
+    border-color: #7f1d1d;
+    box-shadow: 0 0 14px rgba(239,68,68,0.12);
+}
+
+.anc-icon  { font-size: 2rem; position: relative; display: inline-block; }
+
+.anc-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: #ef4444;
+    color: #fff;
+    font-family: var(--font-heading);
+    font-size: 0.58rem;
+    font-weight: 700;
+    min-width: 16px;
+    height: 16px;
+    border-radius: 8px;
+    padding: 0 4px;
+    margin-left: 3px;
+    vertical-align: top;
+    letter-spacing: 0;
+    line-height: 16px;
+}
 
 .anc-title {
     font-family: var(--font-heading);

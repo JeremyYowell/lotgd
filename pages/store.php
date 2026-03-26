@@ -36,6 +36,29 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     if ($action === 'use' && $itemId) {
+        // Preflight for reroll_once: verify there is actually a recent failure to re-roll
+        // before calling useConsumable (which would mark the daily state as used).
+        $effectType = $db->fetchValue(
+            "SELECT si.effect_type FROM user_inventory ui
+             JOIN store_items si ON si.id = ui.item_id
+             WHERE ui.user_id = ? AND ui.item_id = ? AND ui.quantity > 0 LIMIT 1",
+            [$userId, $itemId]
+        );
+        if ($effectType === 'reroll_once') {
+            $lastAdv = $db->fetchOne(
+                "SELECT al.id FROM adventure_log al
+                 WHERE al.user_id = ? ORDER BY al.adventured_at DESC LIMIT 1",
+                [$userId]
+            );
+            if (!$lastAdv || !in_array(
+                $db->fetchValue("SELECT outcome FROM adventure_log WHERE id = ?", [$lastAdv['id']]),
+                ['failure', 'crit_failure']
+            )) {
+                Session::setFlash('error', 'No recent failure to re-roll. Your scroll remains safely in your satchel.');
+                redirect('/pages/store.php');
+            }
+        }
+
         $result = $store->useConsumable($userId, $itemId);
 
         if (!$result['success']) {
@@ -67,30 +90,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     break;
 
                 case 'reroll_once':
-                    // Check there's a recent failure to reroll
+                    // Preflight already verified a recent failure exists above.
+                    // Store.php::useConsumable() marked daily state used WITHOUT consuming inventory.
                     $lastAdv = $db->fetchOne(
-                        "SELECT * FROM adventure_log WHERE user_id = ?
+                        "SELECT id FROM adventure_log WHERE user_id = ?
                          ORDER BY adventured_at DESC LIMIT 1",
                         [$userId]
                     );
-                    if (!$lastAdv || in_array($lastAdv['outcome'], ['success', 'crit_success'])) {
-                        // Refund — no failure to reroll
-                        $db->run(
-                            "INSERT INTO user_inventory (user_id, item_id, quantity, equipped)
-                             VALUES (?, ?, 1, 1)
-                             ON DUPLICATE KEY UPDATE quantity = quantity + 1",
-                            [$userId, $itemId]
-                        );
-                        Session::setFlash('error',
-                            'No recent failure to re-roll. Your scroll has been returned.'
-                        );
-                    } else {
-                        Session::set('reroll_pending', $lastAdv['id']);
-                        Session::set('reroll_used_' . date('Y-m-d'), true);
-                        Session::setFlash('success',
-                            'Second Chance Scroll used! Head to Adventure to re-roll your last failure.'
-                        );
-                    }
+                    Session::set('reroll_pending', $lastAdv['id']);
+                    Session::setFlash('success',
+                        'Second Chance Scroll activated! Head to Adventure — your last failure awaits a second chance.'
+                    );
                     break;
             }
         }

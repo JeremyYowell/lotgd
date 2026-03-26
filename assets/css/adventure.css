@@ -193,6 +193,25 @@
     line-height: 1.2;
 }
 
+/* Scenario illustration — only rendered when image file is present on disk */
+.encounter-img-wrap {
+    margin: 0.85rem 0 1.1rem;
+    border-radius: var(--radius);
+    overflow: hidden;
+    border: 1px solid var(--color-border);
+    background: var(--color-bg-card); /* placeholder bg while loading */
+    max-height: 340px;
+}
+
+.encounter-img {
+    display: block;
+    width: 100%;
+    max-height: 340px;
+    object-fit: cover;
+    object-position: center 20%; /* bias toward upper portion of image */
+    transition: opacity 0.3s ease;
+}
+
 .encounter-flavor {
     font-style: italic;
     color: var(--color-text-dim);
@@ -498,6 +517,27 @@
 /* -----------------------------------------------------------------------
    DEBT DRAGON MINI-GAME
 ----------------------------------------------------------------------- */
+
+/* Dragon arena inherits pvp-arena layout but gets red accent overrides */
+.dragon-arena .combatant-card.enemy {
+    border-color: #7f1d1d;
+    background: linear-gradient(135deg, #1a0505, #1f0808);
+}
+.dragon-arena .pvp-vs {
+    color: #ef4444;
+    text-shadow: 0 0 12px rgba(239,68,68,0.5);
+}
+.dragon-arena .pvp-round-indicator {
+    border-color: #7f1d1d;
+    color: #fca5a5;
+}
+.dragon-arena .pvp-attack-btn {
+    background: linear-gradient(135deg, #7f1d1d, #991b1b);
+    border-color: #ef4444;
+}
+.dragon-arena .pvp-attack-btn:hover {
+    background: linear-gradient(135deg, #991b1b, #b91c1c);
+}
 .dragon-challenge-card {
     margin-top: 1.5rem;
     padding: 1.5rem 1.75rem;
@@ -572,4 +612,263 @@
 
 .dragon-result {
     border-color: #7f1d1d;
+}
+
+/* -----------------------------------------------------------------------
+   DRAGON BATTLE — strategy choice screen extras
+----------------------------------------------------------------------- */
+.dragon-battle-preview {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 1.5rem;
+    margin: 1rem 0 0.5rem;
+    padding: 0.9rem 1.25rem;
+    background: rgba(127,29,29,0.18);
+    border: 1px solid #7f1d1d;
+    border-radius: var(--radius);
+}
+
+.battle-preview-side {
+    text-align: center;
+    flex: 1;
+}
+
+.battle-preview-label {
+    font-family: var(--font-heading);
+    font-size: 0.72rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--color-text-muted);
+    margin-bottom: 0.2rem;
+}
+
+.battle-preview-hp {
+    font-family: var(--font-heading);
+    font-size: 1.1rem;
+    color: #fca5a5;
+    font-weight: 700;
+}
+
+.battle-preview-mod {
+    font-size: 0.78rem;
+    color: var(--color-text-dim);
+    margin-top: 0.15rem;
+}
+
+.battle-preview-vs {
+    font-size: 1.5rem;
+    color: #7f1d1d;
+    flex-shrink: 0;
+}
+
+.dragon-strategy-row {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    margin-bottom: 0.3rem;
+}
+
+.dragon-style-badge {
+    font-family: var(--font-heading);
+    font-size: 0.65rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    border: 1px solid;
+    border-radius: 3px;
+    padding: 0.15rem 0.45rem;
+}
+
+.dragon-atk-mod {
+    font-family: var(--font-heading);
+    font-size: 0.78rem;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+}
+
+/* -----------------------------------------------------------------------
+   DRAGON BATTLE — combat log result screen
+----------------------------------------------------------------------- */
+.dragon-battle-result {
+    border-color: #7f1d1d;
+}
+
+.dragon-hp-bars {
+    margin: 1.25rem 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+}
+
+.dragon-hp-row {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.dragon-hp-label {
+    font-family: var(--font-heading);
+    font-size: 0.72rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--color-text-muted);
+    width: 90px;
+    flex-shrink: 0;
+}
+
+.dragon-hp-track {
+    flex: 1;
+    height: 10px;
+    background: rgba(255,255,255,0.06);
+    border-radius: 5px;
+    overflow: hidden;
+    border: 1px solid rgba(255,255,255,0.1);
+}
+
+.dragon-hp-fill {
+    height: 100%;
+    border-radius: 5px;
+    transition: width 0.5s ease;
+}
+
+.player-hp-fill  { background: linear-gradient(90deg, #22c55e, #4ade80); }
+.dragon-hp-fill-bar { background: linear-gradient(90deg, #ef4444, #fca5a5); }
+
+.dragon-hp-val {
+    font-family: var(--font-heading);
+    font-size: 0.72rem;
+    color: var(--color-text-muted);
+    width: 70px;
+    text-align: right;
+    flex-shrink: 0;
+}
+
+.dragon-combat-log {
+    background: rgba(0,0,0,0.3);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius);
+    padding: 0.9rem 1rem;
+    max-height: 280px;
+    overflow-y: auto;
+    font-size: 0.82rem;
+    margin: 0.5rem 0;
+}
+
+.combat-log-header {
+    font-family: var(--font-heading);
+    font-size: 0.7rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--color-text-dim);
+    padding-bottom: 0.5rem;
+    margin-bottom: 0.5rem;
+    border-bottom: 1px solid var(--color-border);
+}
+
+.combat-round {
+    margin-bottom: 0.6rem;
+}
+
+.round-label {
+    font-family: var(--font-heading);
+    font-size: 0.65rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--color-text-dim);
+    margin-bottom: 0.2rem;
+}
+
+.round-event {
+    padding: 0.2rem 0.5rem;
+    border-radius: 3px;
+    margin-bottom: 0.15rem;
+    line-height: 1.45;
+    color: var(--color-text-muted);
+}
+
+.round-event .roll-nums {
+    color: var(--color-text-dim);
+    font-size: 0.78rem;
+}
+
+.event-hit       { color: #4ade80; background: rgba(34,197,94,0.06); }
+.event-dragon-hit { color: #fca5a5; background: rgba(239,68,68,0.06); }
+.event-miss      { color: var(--color-text-dim); }
+
+.combat-draw-notice {
+    font-style: italic;
+    color: #a78bfa;
+    font-size: 0.82rem;
+    padding-top: 0.5rem;
+    border-top: 1px solid var(--color-border);
+    margin-top: 0.5rem;
+}
+
+/* -----------------------------------------------------------------------
+   SECOND CHANCE SCROLL CARD
+----------------------------------------------------------------------- */
+.scroll-chance-card {
+    margin-top: 1.25rem;
+    padding: 1.25rem 1.5rem;
+    background: linear-gradient(135deg, #0a100a, #0d150d);
+    border: 1px solid #4a6741;
+    border-radius: var(--radius-lg);
+    text-align: center;
+    animation: fadeIn 0.4s ease;
+    box-shadow: 0 0 18px rgba(74,134,58,0.1);
+}
+
+.scroll-icon {
+    font-size: 2rem;
+    display: block;
+    margin-bottom: 0.5rem;
+    filter: drop-shadow(0 0 10px rgba(74,195,74,0.4));
+}
+
+.scroll-title {
+    font-family: var(--font-heading);
+    font-size: 1rem;
+    letter-spacing: 0.08em;
+    color: #86efac;
+    margin-bottom: 0.5rem;
+}
+
+.scroll-desc {
+    font-size: 0.88rem;
+    color: var(--color-text-muted);
+    line-height: 1.6;
+    margin-bottom: 0.25rem;
+}
+
+.scroll-btn {
+    background: linear-gradient(135deg, #14532d, #166534);
+    border-color: #22c55e;
+    color: #86efac;
+    font-family: var(--font-heading);
+    letter-spacing: 0.08em;
+    padding: 0.65rem 1.5rem;
+    margin-top: 0.5rem;
+}
+
+.scroll-btn:hover {
+    background: linear-gradient(135deg, #166534, #15803d);
+    border-color: #4ade80;
+    color: #fff;
+}
+
+/* -----------------------------------------------------------------------
+   SECOND CHANCE SCROLL — result badge
+----------------------------------------------------------------------- */
+.reroll-badge {
+    display: inline-block;
+    font-family: var(--font-heading);
+    font-size: 0.7rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: #86efac;
+    border: 1px solid #4a6741;
+    border-radius: 3px;
+    padding: 0.2rem 0.65rem;
+    margin-bottom: 0.85rem;
+    background: rgba(34,197,94,0.06);
 }

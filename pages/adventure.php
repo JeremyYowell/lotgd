@@ -89,47 +89,72 @@ function clearAdvSession(int $userId): void {
 }
 
 /**
- * The three Debt Dragon challenge choices (hardcoded — not DB-driven).
- * Category is 'banking' so Debt Slayers receive their +3 class bonus.
+ * The three Debt Dragon battle strategies (hardcoded — not DB-driven).
+ * attack_bonus is added to the player's d20 roll every combat round.
+ * Category is 'banking' so Debt Slayers receive their +3 class bonus on top.
  */
 function getDragonChoices(): array {
     return [
         [
-            'id'                     => 1,
-            'choice_text'            => 'Invoke the Debt Avalanche — strike the highest-rate debt first',
-            'hint_text'              => 'Mathematical precision. Highest interest falls first.',
-            'difficulty'             => 13,
-            'crit_gold_bonus'        => 25,
-            'crit_gold_penalty'      => 12,
-            'success_narrative'      => 'You identify the highest-rate debt and strike with calculated fury. The dragon\'s scales crack where the interest lives. It staggers. A window opens in the dungeon wall — daylight, and another adventure beyond it.',
-            'failure_narrative'      => 'The Avalanche requires more discipline than the dragon permits today. You falter before the highest peak. The dragon exhales interest in your direction. You retreat without gain, but without loss.',
-            'crit_success_narrative' => 'A perfect strike. The highest-rate debt is obliterated in a burst of golden light. The dragon howls. The dungeon shakes. Coins rain from the ceiling and the door swings open ahead of you.',
-            'crit_failure_narrative' => 'The Avalanche buries you first. The dragon laughs with compound frequency. Some of the gold you were carrying scatters across the dungeon floor.',
+            'id'           => 1,
+            'choice_text'  => 'Invoke the Debt Avalanche — strike the highest-rate debt first',
+            'hint_text'    => 'Aggressive. Maximum attack power. High risk, high reward.',
+            'attack_bonus' => 3,
+            'style_label'  => 'Aggressive',
+            'style_color'  => '#ef4444',
         ],
         [
-            'id'                     => 2,
-            'choice_text'            => 'Deploy the Debt Snowball — eliminate the smallest balance first',
-            'hint_text'              => 'Momentum is its own magic. Small wins compound.',
-            'difficulty'             => 10,
-            'crit_gold_bonus'        => 20,
-            'crit_gold_penalty'      => 8,
-            'success_narrative'      => 'The smallest debt falls cleanly. The dragon staggers backward. Something like hope fills the chamber. A path forward glows faintly at the end of the dungeon.',
-            'failure_narrative'      => 'The Snowball gains speed but loses direction. The dragon sidesteps it entirely. You eye each other across the dungeon floor. Neither side advances.',
-            'crit_success_narrative' => 'Three small debts fall in rapid succession, each one feeding the next. The dragon cannot recover its footing. The realm recognizes your momentum and grants you the strength to continue.',
-            'crit_failure_narrative' => 'The Snowball rolls back down the hill. You slip. The dragon takes something small but insulting from your coin pouch as you scramble to your feet.',
+            'id'           => 2,
+            'choice_text'  => 'Deploy the Debt Snowball — build momentum with small wins',
+            'hint_text'    => 'Balanced. Steady pressure. Reliable and consistent.',
+            'attack_bonus' => 1,
+            'style_label'  => 'Balanced',
+            'style_color'  => '#f59e0b',
         ],
         [
-            'id'                     => 3,
-            'choice_text'            => 'Negotiate a settlement — offer the dragon 60 cents on the dollar',
-            'hint_text'              => 'Dragons sometimes negotiate. Sometimes.',
-            'difficulty'             => 8,
-            'crit_gold_bonus'        => 18,
-            'crit_gold_penalty'      => 6,
-            'success_narrative'      => 'The dragon, exhausted by the chase, accepts your terms. The settled amount is less than the full balance. You clasp hands at the dungeon gate as the exit opens behind you.',
-            'failure_narrative'      => 'The dragon snorts at your offer. Negotiations collapse entirely. You retreat without loss, but also without progress. The dungeon remains.',
-            'crit_success_narrative' => 'Forty-eight cents on the dollar. The dragon cannot believe it either. You shake hands. The realm is astonished. A bonus spills from the rafters as the door falls open.',
-            'crit_failure_narrative' => 'The dragon reports the failed negotiation to an unseen bureau. A small fine is assessed. You hear distant laughter echo through the stone corridors.',
+            'id'           => 3,
+            'choice_text'  => 'Negotiate a settlement — wear the dragon down diplomatically',
+            'hint_text'    => 'Conservative. Lower attack, but sustainable over many rounds.',
+            'attack_bonus' => -1,
+            'style_label'  => 'Conservative',
+            'style_color'  => '#22c55e',
         ],
+    ];
+}
+
+/**
+ * Initialise a Debt Dragon battle session. Rolls initiative and stats only —
+ * actual round-by-round combat happens via dragon_attack POST actions.
+ */
+function initDragonFight(array $user, array $choice, Adventure $adventure): array {
+    $level           = (int)$user['level'];
+    $playerMaxHp     = User::maxHpForLevel($level);
+    $dragonMaxHp     = $playerMaxHp + rand(5, 10);
+    $dragonMod       = min(10, (int)floor($level / 4) + 2);
+    $playerBaseMod   = $adventure->calculateModifier($level, $user['class'], 'banking');
+    $playerAttackMod = $playerBaseMod + (int)$choice['attack_bonus'];
+    $playerDefMod    = $playerBaseMod;
+
+    $playerInit  = rand(1, 20) + $playerBaseMod;
+    $dragonInit  = rand(1, 20) + $dragonMod;
+    $playerFirst = ($playerInit >= $dragonInit);
+
+    $initLine = $playerFirst
+        ? "⚔ Initiative: You move first ({$playerInit} vs {$dragonInit})"
+        : "🐉 Initiative: The Dragon strikes first ({$dragonInit} vs {$playerInit})";
+
+    return [
+        'choice'            => $choice,
+        'player_hp'         => $playerMaxHp,
+        'player_max_hp'     => $playerMaxHp,
+        'dragon_hp'         => $dragonMaxHp,
+        'dragon_max_hp'     => $dragonMaxHp,
+        'player_attack_mod' => $playerAttackMod,
+        'player_def_mod'    => $playerDefMod,
+        'dragon_mod'        => $dragonMod,
+        'player_first'      => $playerFirst,
+        'round'             => 1,
+        'log_lines'         => [$initLine],
     ];
 }
 
@@ -273,7 +298,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     // ------------------------------------------------------------------
-    // DRAGON_CHOOSE — roll dice, resolve outcome, restore action on win
+    // DRAGON_CHOOSE — pick strategy, initialise round-by-round fight
     // ------------------------------------------------------------------
     if ($action === 'dragon_choose') {
         $dragonChoiceId = (int)($_POST['dragon_choice_id'] ?? 0);
@@ -284,8 +309,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             redirect('/pages/adventure.php');
         }
 
-        $allChoices  = json_decode($advSession['choices_json'], true) ?? [];
-        $choice      = null;
+        $allChoices = json_decode($advSession['choices_json'], true) ?? [];
+        $choice     = null;
         foreach ($allChoices as $dc) {
             if ((int)$dc['id'] === $dragonChoiceId) { $choice = $dc; break; }
         }
@@ -293,69 +318,246 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             redirect('/pages/adventure.php');
         }
 
-        // Roll — category 'banking' so Debt Slayers get class bonus
-        $rawRoll   = rand(1, 20);
-        $modifier  = $adventure->calculateModifier((int)$user['level'], $user['class'], 'banking', 0);
-        $finalRoll = $rawRoll + $modifier;
-        $dc        = $choice['difficulty'];
+        $freshUser  = $userModel->findById($userId);
+        $fightState = initDragonFight($freshUser, $choice, $adventure);
 
-        if ($rawRoll === 20) {
-            $outcome = 'crit_success';
-        } elseif ($finalRoll >= $dc) {
-            $outcome = 'success';
-        } elseif ($finalRoll < $dc - 4) {
-            $outcome = 'crit_failure';
-        } else {
-            $outcome = 'failure';
+        $db->run(
+            "UPDATE adventure_sessions
+             SET state = 'dragon_fighting', result_json = ?, updated_at = NOW()
+             WHERE user_id = ?",
+            [json_encode($fightState), $userId]
+        );
+        redirect('/pages/adventure.php');
+    }
+
+    // ------------------------------------------------------------------
+    // DRAGON_ATTACK — process one combat round, persist state or finish
+    // ------------------------------------------------------------------
+    if ($action === 'dragon_attack') {
+        $advSession = getAdvSession($userId);
+
+        if (!$advSession || $advSession['state'] !== 'dragon_fighting') {
+            clearAdvSession($userId);
+            redirect('/pages/adventure.php');
         }
 
-        // Apply rewards / penalties
-        $goldDelta      = 0;
-        $actionRestored = false;
-        if ($outcome === 'success' || $outcome === 'crit_success') {
+        $fs = json_decode($advSession['result_json'], true);
+        if (!$fs) {
+            clearAdvSession($userId);
+            redirect('/pages/adventure.php');
+        }
+
+        $round     = (int)$fs['round'];
+        $maxRounds = 10;
+        $lines     = [];
+
+        if ($fs['player_first']) {
+            // Player attacks
+            $pAtk = rand(1, 20) + $fs['player_attack_mod'];
+            $dDef = rand(1, 20) + $fs['dragon_mod'];
+            if ($pAtk > $dDef) {
+                $dmg = rand(2, 5);
+                $fs['dragon_hp'] = max(0, $fs['dragon_hp'] - $dmg);
+                $lines[] = "Round {$round} — ⚔ You attack ({$pAtk} vs {$dDef}): Hit! {$dmg} dmg → Dragon: {$fs['dragon_hp']}/{$fs['dragon_max_hp']} HP";
+            } else {
+                $lines[] = "Round {$round} — ⚔ You attack ({$pAtk} vs {$dDef}): Miss!";
+            }
+            if ($fs['dragon_hp'] > 0) {
+                $dAtk = rand(1, 20) + $fs['dragon_mod'];
+                $pDef = rand(1, 20) + $fs['player_def_mod'];
+                if ($dAtk > $pDef) {
+                    $dmg = rand(2, 5);
+                    $fs['player_hp'] = max(0, $fs['player_hp'] - $dmg);
+                    $lines[] = "Round {$round} — 🐉 Dragon counter-attacks ({$dAtk} vs {$pDef}): Hit! {$dmg} dmg → You: {$fs['player_hp']}/{$fs['player_max_hp']} HP";
+                } else {
+                    $lines[] = "Round {$round} — 🐉 Dragon counter-attacks ({$dAtk} vs {$pDef}): Miss!";
+                }
+            }
+        } else {
+            // Dragon attacks first
+            $dAtk = rand(1, 20) + $fs['dragon_mod'];
+            $pDef = rand(1, 20) + $fs['player_def_mod'];
+            if ($dAtk > $pDef) {
+                $dmg = rand(2, 5);
+                $fs['player_hp'] = max(0, $fs['player_hp'] - $dmg);
+                $lines[] = "Round {$round} — 🐉 Dragon strikes ({$dAtk} vs {$pDef}): Hit! {$dmg} dmg → You: {$fs['player_hp']}/{$fs['player_max_hp']} HP";
+            } else {
+                $lines[] = "Round {$round} — 🐉 Dragon strikes ({$dAtk} vs {$pDef}): Miss!";
+            }
+            if ($fs['player_hp'] > 0) {
+                $pAtk = rand(1, 20) + $fs['player_attack_mod'];
+                $dDef = rand(1, 20) + $fs['dragon_mod'];
+                if ($pAtk > $dDef) {
+                    $dmg = rand(2, 5);
+                    $fs['dragon_hp'] = max(0, $fs['dragon_hp'] - $dmg);
+                    $lines[] = "Round {$round} — ⚔ You counter-attack ({$pAtk} vs {$dDef}): Hit! {$dmg} dmg → Dragon: {$fs['dragon_hp']}/{$fs['dragon_max_hp']} HP";
+                } else {
+                    $lines[] = "Round {$round} — ⚔ You counter-attack ({$pAtk} vs {$dDef}): Miss!";
+                }
+            }
+        }
+
+        array_push($fs['log_lines'], ...$lines);
+        $fs['round']++;
+
+        $battleDone = ($fs['dragon_hp'] <= 0 || $fs['player_hp'] <= 0 || $fs['round'] > $maxRounds);
+
+        if (!$battleDone) {
             $db->run(
-                "UPDATE daily_state SET actions_remaining = actions_remaining + 1
+                "UPDATE adventure_sessions SET result_json = ?, updated_at = NOW() WHERE user_id = ?",
+                [json_encode($fs), $userId]
+            );
+        } else {
+            if ($fs['dragon_hp'] <= 0)       { $battleResult = 'win'; }
+            elseif ($fs['player_hp'] <= 0)   { $battleResult = 'loss'; }
+            else {
+                $battleResult = 'draw';
+                $fs['log_lines'][] = "═══ 10 rounds — the Dragon retreats into the dungeon. ═══";
+            }
+
+            $goldDelta = 0; $actionRestored = false;
+
+            if ($battleResult === 'win') {
+                $db->run(
+                    "UPDATE daily_state SET actions_remaining = actions_remaining + 1
+                     WHERE user_id = ? AND state_date = ?",
+                    [$userId, date('Y-m-d')]
+                );
+                $actionRestored = true;
+                $hpPct     = $fs['player_max_hp'] > 0 ? $fs['player_hp'] / $fs['player_max_hp'] : 0;
+                $goldDelta = (int)round(15 + $hpPct * 20);
+                $db->run("UPDATE users SET gold = gold + ? WHERE id = ?", [$goldDelta, $userId]);
+            } elseif ($battleResult === 'loss') {
+                $goldDelta = -rand(5, 12);
+                $db->run(
+                    "UPDATE users SET gold = GREATEST(0, gold + ?) WHERE id = ?",
+                    [$goldDelta, $userId]
+                );
+            }
+
+            $db->run(
+                "UPDATE daily_state SET dragon_challenge_used = 1
                  WHERE user_id = ? AND state_date = ?",
                 [$userId, date('Y-m-d')]
             );
-            $actionRestored = true;
-            if ($outcome === 'crit_success') {
-                $goldDelta = (int)($choice['crit_gold_bonus'] ?? 20);
-                $db->run("UPDATE users SET gold = gold + ? WHERE id = ?", [$goldDelta, $userId]);
-            }
-        } elseif ($outcome === 'crit_failure') {
-            $goldDelta = -(int)($choice['crit_gold_penalty'] ?? 8);
+
+            $fs['battle_result']   = $battleResult;
+            $fs['action_restored'] = $actionRestored;
+            $fs['gold_delta']      = $goldDelta;
+
             $db->run(
-                "UPDATE users SET gold = GREATEST(0, gold + ?) WHERE id = ?",
-                [$goldDelta, $userId]
+                "UPDATE adventure_sessions
+                 SET state = 'dragon_result', result_json = ?, updated_at = NOW()
+                 WHERE user_id = ?",
+                [json_encode($fs), $userId]
             );
         }
+        redirect('/pages/adventure.php');
+    }
 
-        // Mark dragon challenge used for today
-        $db->run(
-            "UPDATE daily_state SET dragon_challenge_used = 1
-             WHERE user_id = ? AND state_date = ?",
-            [$userId, date('Y-m-d')]
+    // ------------------------------------------------------------------
+    // REROLL — execute a second-chance re-roll of the last failed adventure
+    // ------------------------------------------------------------------
+    if ($action === 'reroll') {
+        $logId = (int)($_POST['log_id'] ?? 0);
+
+        // Verify log entry: must belong to this user and be a failure
+        $logEntry = $db->fetchOne(
+            "SELECT al.id, al.choice_id, al.xp_delta, al.gold_delta AS old_gold_delta,
+                    al.outcome AS old_outcome,
+                    ac.choice_text, ac.hint_text, ac.difficulty,
+                    ac.base_xp, ac.base_gold,
+                    ac.success_narrative, ac.failure_narrative,
+                    ac.crit_success_narrative, ac.crit_failure_narrative,
+                    s.title AS scenario_title, s.id AS scenario_id, s.category
+             FROM adventure_log al
+             JOIN adventure_choices ac ON ac.id = al.choice_id
+             JOIN adventure_scenarios s ON s.id = al.scenario_id
+             WHERE al.id = ? AND al.user_id = ?
+               AND al.outcome IN ('failure','crit_failure')",
+            [$logId, $userId]
         );
 
-        // Persist result to session
-        $dragonResult = [
-            'outcome'         => $outcome,
-            'roll'            => $rawRoll,
-            'modifier'        => $modifier,
-            'final_roll'      => $finalRoll,
-            'difficulty'      => $dc,
-            'choice_text'     => $choice['choice_text'],
-            'narrative'       => $choice[$outcome . '_narrative'],
-            'gold_delta'      => $goldDelta,
-            'action_restored' => $actionRestored,
+        // Clear the pending flag regardless — one shot
+        Session::set('reroll_pending', null);
+
+        if (!$logEntry) {
+            Session::setFlash('error', 'The scroll found nothing to rewind. Your adventure log may have changed.');
+            redirect('/pages/adventure.php');
+        }
+
+        // Fresh roll (same modifier logic as Adventure::execute)
+        $storeObj  = new Store();
+        $itemBonus = $storeObj->getRollBonus($userId, $logEntry['category']);
+        $modifier  = $adventure->calculateModifier(
+            (int)$user['level'], $user['class'], $logEntry['category']
+        ) + $itemBonus;
+        $rawRoll   = random_int(1, 20);
+        $finalRoll = $rawRoll + $modifier;
+        $outcome   = $adventure->determineOutcome($finalRoll, (int)$logEntry['difficulty'], $rawRoll);
+
+        // Reverse old gold penalty (if any) then apply new rewards
+        $freshUser = $userModel->findById($userId);
+        $oldGoldDelta = (int)$logEntry['old_gold_delta'];
+        if ($oldGoldDelta < 0) {
+            // Restore what was lost on the original failure
+            $db->run("UPDATE users SET gold = gold + ? WHERE id = ?", [abs($oldGoldDelta), $userId]);
+            $freshUser = $userModel->findById($userId); // refresh after restore
+        }
+
+        $rewards = $adventure->calculateRewards(
+            $outcome, (int)$logEntry['base_xp'], (int)$logEntry['base_gold'], (int)$freshUser['gold']
+        );
+
+        $xpResult = ['leveled_up' => false, 'new_level' => (int)$freshUser['level'], 'gold_awarded' => 0];
+        if ($rewards['xp'] > 0) {
+            $xpResult = $userModel->awardXp($userId, $rewards['xp']);
+        }
+        if ($rewards['gold'] > 0) {
+            $db->run("UPDATE users SET gold = gold + ? WHERE id = ?", [$rewards['gold'], $userId]);
+        } elseif ($rewards['gold'] < 0) {
+            $db->run("UPDATE users SET gold = GREATEST(0, gold + ?) WHERE id = ?", [$rewards['gold'], $userId]);
+        }
+
+        $narrative = match($outcome) {
+            'crit_success' => $logEntry['crit_success_narrative'],
+            'success'      => $logEntry['success_narrative'],
+            'failure'      => $logEntry['failure_narrative'],
+            'crit_failure' => $logEntry['crit_failure_narrative'],
+        };
+
+        $rerollResult = [
+            'scenario_title' => $logEntry['scenario_title'],
+            'choice_text'    => $logEntry['choice_text'],
+            'choice_id'      => (int)$logEntry['choice_id'],
+            'outcome'        => $outcome,
+            'roll'           => $rawRoll,
+            'modifier'       => $modifier,
+            'final_roll'     => $finalRoll,
+            'difficulty'     => (int)$logEntry['difficulty'],
+            'narrative'      => $narrative,
+            'xp'             => $rewards['xp'],
+            'gold'           => $rewards['gold'],
+            'leveled_up'     => $xpResult['leveled_up'],
+            'new_level'      => $xpResult['new_level'] ?? (int)$freshUser['level'],
+            'gold_awarded'   => $xpResult['gold_awarded'] ?? 0,
+            'is_reroll'      => true,
         ];
+
         $db->run(
-            "UPDATE adventure_sessions
-             SET state = 'dragon_result', result_json = ?, updated_at = NOW()
-             WHERE user_id = ?",
-            [json_encode($dragonResult), $userId]
+            "INSERT INTO adventure_sessions
+                 (user_id, state, scenario_id, choices_json, result_json, action_consumed)
+             VALUES (?, 'result', ?, '[]', ?, 0)
+             ON DUPLICATE KEY UPDATE
+                 state = 'result',
+                 scenario_id = VALUES(scenario_id),
+                 choices_json = '[]',
+                 result_json = VALUES(result_json),
+                 action_consumed = 0,
+                 updated_at = NOW()",
+            [$userId, (int)$logEntry['scenario_id'], json_encode($rerollResult)]
         );
+
         redirect('/pages/adventure.php');
     }
 
@@ -376,6 +578,7 @@ $state      = 'idle';
 $scenario   = null;
 $choices    = null;
 $result     = null;
+$fightState = null;   // dragon_fighting live battle state
 
 if ($advSession) {
     if ($advSession['state'] === 'scenario') {
@@ -409,6 +612,14 @@ if ($advSession) {
         if (!empty($dragonChoiceRows)) {
             $state   = 'dragon';
             $choices = $dragonChoiceRows;
+        } else {
+            clearAdvSession($userId);
+        }
+    } elseif ($advSession['state'] === 'dragon_fighting' && $advSession['result_json']) {
+        $fsData = json_decode($advSession['result_json'], true);
+        if ($fsData) {
+            $state      = 'dragon_fighting';
+            $fightState = $fsData;
         } else {
             clearAdvSession($userId);
         }
@@ -462,6 +673,25 @@ $dragonAvailable = ($state === 'idle')
     && ($dailyState['actions_remaining'] <= 0)
     && empty($dailyState['dragon_challenge_used']);
 
+// Second Chance Scroll: check session for a pending reroll
+$rerollPending = null;
+$rerollPendingId = Session::get('reroll_pending', null);
+if ($rerollPendingId && $state === 'idle') {
+    $rerollPending = $db->fetchOne(
+        "SELECT al.id, s.title AS scenario_title, ac.choice_text
+         FROM adventure_log al
+         JOIN adventure_choices ac ON ac.id = al.choice_id
+         JOIN adventure_scenarios s ON s.id = al.scenario_id
+         WHERE al.id = ? AND al.user_id = ?
+           AND al.outcome IN ('failure','crit_failure')",
+        [(int)$rerollPendingId, $userId]
+    );
+    if (!$rerollPending) {
+        // Log entry no longer valid — clear the stale flag silently
+        Session::set('reroll_pending', null);
+    }
+}
+
 $categoryMeta = [
     'shopping'   => ['icon' => '🛒', 'label' => 'Shopping',   'color' => '#ec4899'],
     'work'       => ['icon' => '💼', 'label' => 'Work',        'color' => '#a78bfa'],
@@ -483,7 +713,7 @@ $outcomeLabels = [
 // =========================================================================
 $pageTitle = 'Go Adventuring';
 $bodyClass = 'page-adventure';
-$extraCss  = ['adventure.css', 'voice_toggle.css'];
+$extraCss  = ['adventure.css', 'voice_toggle.css', 'pvp.css'];
 
 ob_start();
 ?>
@@ -570,6 +800,27 @@ ob_start();
                         </p>
                     </div>
                     <?php endif; ?>
+
+                    <?php if ($rerollPending): ?>
+                    <div class="scroll-chance-card">
+                        <div class="scroll-icon">📜</div>
+                        <div class="scroll-title">Second Chance Scroll</div>
+                        <div class="scroll-desc">
+                            A mystical scroll shimmers in your satchel. You may replay your last defeat:
+                            <em><?= e($rerollPending['scenario_title']) ?></em>
+                            — <em><?= e($rerollPending['choice_text']) ?></em>
+                        </div>
+                        <form method="POST" class="mt-2">
+                            <?= Session::csrfField() ?>
+                            <input type="hidden" name="action"  value="reroll">
+                            <input type="hidden" name="log_id"  value="<?= (int)$rerollPending['id'] ?>">
+                            <button type="submit" class="btn scroll-btn">
+                                📜 Unroll the Second Chance
+                            </button>
+                        </form>
+                    </div>
+                    <?php endif; ?>
+
                 <?php else: ?>
                     <div class="adv-ready-icon">⚔️</div>
                     <h2>Ready for Adventure?</h2>
@@ -642,6 +893,12 @@ ob_start();
         (int)$user['level'], $user['class'], $scenario['category'], $itemBonus
     );
     $cat = $categoryMeta[$scenario['category']] ?? $categoryMeta['daily_life'];
+
+    // Check for scenario illustration (gracefully absent — no image = nothing shown)
+    $scenarioImgFile = ROOT_PATH . '/assets/img/adventures/scenario_' . (int)$scenario['id'] . '.jpg';
+    $scenarioImgUrl  = file_exists($scenarioImgFile)
+        ? BASE_URL . '/assets/img/adventures/scenario_' . (int)$scenario['id'] . '.jpg'
+        : null;
     ?>
     <div class="adv-encounter">
 
@@ -651,6 +908,16 @@ ob_start();
         </div>
 
         <h2 class="encounter-title"><?= e($scenario['title']) ?></h2>
+
+        <?php if ($scenarioImgUrl): ?>
+        <div class="encounter-img-wrap">
+            <img src="<?= e($scenarioImgUrl) ?>"
+                 alt="<?= e($scenario['title']) ?>"
+                 class="encounter-img"
+                 loading="lazy"
+                 onerror="this.parentElement.style.display='none'">
+        </div>
+        <?php endif; ?>
 
         <?php if ($scenario['flavor_text']): ?>
         <p class="encounter-flavor">"<?= e($scenario['flavor_text']) ?>"</p>
@@ -701,6 +968,10 @@ ob_start();
     ===================================================== -->
     <?php $ol = $outcomeLabels[$result['outcome']] ?? $outcomeLabels['failure']; ?>
     <div class="adv-result <?= $result['outcome'] ?>-result">
+
+        <?php if (!empty($result['is_reroll'])): ?>
+        <div class="reroll-badge">📜 Second Chance Scroll — Replay</div>
+        <?php endif; ?>
 
         <div class="result-outcome-badge" style="color:<?= $ol['color'] ?>;border-color:<?= $ol['color'] ?>">
             <?= $ol['icon'] ?> <?= $ol['label'] ?>
@@ -803,18 +1074,127 @@ ob_start();
 
     </div>
 
-    <?php elseif ($state === 'dragon' && $choices): ?>
+    <?php elseif ($state === 'dragon_fighting' && $fightState): ?>
     <!-- =====================================================
-         DRAGON — choice screen
+         DRAGON_FIGHTING — round-by-round combat (PvP style)
     ===================================================== -->
     <?php
-    $totalMod = $adventure->calculateModifier((int)$user['level'], $user['class'], 'banking', 0);
+    $playerHpPct  = max(0, min(100, $fightState['player_max_hp'] > 0
+        ? round($fightState['player_hp'] / $fightState['player_max_hp'] * 100) : 0));
+    $dragonHpPct  = max(0, min(100, $fightState['dragon_max_hp'] > 0
+        ? round($fightState['dragon_hp'] / $fightState['dragon_max_hp'] * 100) : 0));
+    $playerHpColor = $playerHpPct > 50 ? '#22c55e' : ($playerHpPct > 25 ? '#f59e0b' : '#ef4444');
+    $dragonHpColor = $dragonHpPct > 50 ? '#22c55e' : ($dragonHpPct > 25 ? '#f59e0b' : '#ef4444');
+    $choice        = $fightState['choice'] ?? [];
+    $bonusSign     = ($choice['attack_bonus'] ?? 0) >= 0 ? '+' : '';
+    ?>
+    <div class="pvp-arena dragon-arena">
+
+        <div class="pvp-combatants">
+
+            <div class="combatant-card you">
+                <div class="combatant-icon"><?= ['investor'=>'📈','debt_slayer'=>'🗡️','saver'=>'🏦','entrepreneur'=>'🚀','minimalist'=>'🧘'][$user['class']] ?? '⚔️' ?></div>
+                <div class="combatant-name"><?= e($user['username']) ?> <span class="text-muted">(you)</span></div>
+                <div class="combatant-level text-muted">Level <?= $user['level'] ?></div>
+                <div class="combatant-hp-wrap">
+                    <div class="hp-meter-label">
+                        <span style="color:<?= $playerHpColor ?>">
+                            <?= $fightState['player_hp'] ?> / <?= $fightState['player_max_hp'] ?> HP
+                        </span>
+                        <span class="text-muted" style="font-size:0.7rem"><?= $playerHpPct ?>%</span>
+                    </div>
+                    <div class="hp-meter-track">
+                        <div class="hp-meter-fill" style="width:<?= $playerHpPct ?>%;background:<?= $playerHpColor ?>"></div>
+                    </div>
+                    <?php if ($playerHpPct <= 25): ?>
+                    <div class="hp-meter-danger">⚠ Critical HP!</div>
+                    <?php endif; ?>
+                </div>
+                <div class="combatant-stats text-muted">
+                    ⚔ +<?= $fightState['player_attack_mod'] ?> atk (<?= e($choice['style_label'] ?? '') ?>)
+                    &nbsp;·&nbsp;
+                    🛡 +<?= $fightState['player_def_mod'] ?> def
+                </div>
+            </div>
+
+            <div class="pvp-vs">VS</div>
+
+            <div class="combatant-card enemy">
+                <div class="combatant-icon">🐉</div>
+                <div class="combatant-name" style="color:#fca5a5">The Debt Dragon</div>
+                <div class="combatant-level text-muted">Ancient Boss</div>
+                <div class="combatant-hp-wrap">
+                    <div class="hp-meter-label">
+                        <span style="color:<?= $dragonHpColor ?>">
+                            <?= $fightState['dragon_hp'] ?> / <?= $fightState['dragon_max_hp'] ?> HP
+                        </span>
+                        <span class="text-muted" style="font-size:0.7rem"><?= $dragonHpPct ?>%</span>
+                    </div>
+                    <div class="hp-meter-track">
+                        <div class="hp-meter-fill" style="width:<?= $dragonHpPct ?>%;background:<?= $dragonHpColor ?>"></div>
+                    </div>
+                    <?php if ($dragonHpPct <= 25): ?>
+                    <div class="hp-meter-danger">⚠ Nearly slain!</div>
+                    <?php endif; ?>
+                </div>
+                <div class="combatant-stats text-muted">
+                    ⚔ +<?= $fightState['dragon_mod'] ?> atk
+                    &nbsp;·&nbsp;
+                    🛡 +<?= $fightState['dragon_mod'] ?> def
+                </div>
+            </div>
+
+        </div><!-- /combatants -->
+
+        <div class="pvp-round-indicator">
+            Round <?= $fightState['round'] ?> / 10
+        </div>
+
+        <?php if (!empty($fightState['log_lines'])): ?>
+        <div class="pvp-log card">
+            <h4 class="pvp-log-title">🐉 Combat Log</h4>
+            <div class="pvp-log-body">
+                <?php foreach (array_reverse($fightState['log_lines']) as $line):
+                    $line = trim($line);
+                    if (empty($line)) continue;
+                    $lc = str_contains($line, 'Initiative') ? 'log-init'
+                        : (str_contains($line, 'Hit!')  ? 'log-hit'
+                        : (str_contains($line, 'Miss!') ? 'log-miss' : ''));
+                ?>
+                <div class="log-line <?= $lc ?>"><?= e($line) ?></div>
+                <?php endforeach; ?>
+            </div>
+        </div>
+        <?php endif; ?>
+
+        <div class="pvp-actions">
+            <form method="POST">
+                <?= Session::csrfField() ?>
+                <input type="hidden" name="action" value="dragon_attack">
+                <button type="submit" class="btn btn-primary pvp-attack-btn">
+                    ⚔ Attack
+                    <span style="font-size:0.75rem;opacity:0.8;margin-left:0.35rem">
+                        d20 + <?= $fightState['player_attack_mod'] ?>
+                    </span>
+                </button>
+            </form>
+        </div>
+
+    </div><!-- /dragon-arena -->
+
+    <?php elseif ($state === 'dragon' && $choices): ?>
+    <!-- =====================================================
+         DRAGON — battle strategy selection
+    ===================================================== -->
+    <?php
+    $baseMod = $adventure->calculateModifier((int)$user['level'], $user['class'], 'banking');
+    $playerMaxHp = User::maxHpForLevel((int)$user['level']);
     ?>
     <div class="adv-encounter dragon-encounter">
 
         <div class="encounter-category">
             <span>🐉</span>
-            <span style="color:#ef4444">Debt Dragon Challenge</span>
+            <span style="color:#ef4444">Debt Dragon — Boss Battle</span>
             <span style="color:var(--color-text-dim);font-size:0.65rem;margin-left:0.5rem">— Once Per Day</span>
         </div>
 
@@ -822,25 +1202,46 @@ ob_start();
 
         <p class="encounter-flavor">"Some debts are not merely financial. They are monsters."</p>
 
-        <p class="encounter-desc" style="margin-bottom:2rem">
-            The dungeon reeks of compound interest. The Debt Dragon blocks the far door,
-            scales glinting with accumulated fees and unpaid balances. It eyes you with the
-            patience of a 30-year mortgage. You have one chance to break through.
-            Choose your weapon.
-        </p>
-
-        <div class="encounter-modifier-hint" style="margin-bottom:1.25rem">
-            Your modifier: <strong class="text-gold">+<?= $totalMod ?></strong>
-            (Level <?= $user['level'] ?> + class bonus<?= $user['class'] === 'debt_slayer' ? ' <span style="color:#ef4444">⚔ +3 Debt Slayer</span>' : '' ?>)
+        <div class="dragon-battle-preview">
+            <div class="battle-preview-side">
+                <div class="battle-preview-label">You</div>
+                <div class="battle-preview-hp"><?= $playerMaxHp ?> HP</div>
+                <div class="battle-preview-mod">+<?= $baseMod ?> modifier
+                    <?= $user['class'] === 'debt_slayer' ? '<span style="color:#ef4444">(+3 Debt Slayer)</span>' : '' ?>
+                </div>
+            </div>
+            <div class="battle-preview-vs">⚔</div>
+            <div class="battle-preview-side">
+                <div class="battle-preview-label">🐉 Debt Dragon</div>
+                <div class="battle-preview-hp"><?= $playerMaxHp + 5 ?>–<?= $playerMaxHp + 10 ?> HP</div>
+                <div class="battle-preview-mod">+<?= min(10, (int)floor((int)$user['level'] / 4) + 2) ?> modifier</div>
+            </div>
         </div>
 
+        <p class="encounter-desc" style="margin:1.25rem 0 1.5rem">
+            The dungeon reeks of compound interest. The Debt Dragon blocks the far door,
+            scales glinting with accumulated fees and unpaid balances. Up to 10 rounds of
+            combat await. Choose your battle strategy — it determines your attack bonus each round.
+            Win to earn back an action. Lose and pay a small gold penalty.
+        </p>
+
         <div class="encounter-choices">
-            <?php foreach ($choices as $choice): ?>
+            <?php foreach ($choices as $choice):
+                $bonusSign = $choice['attack_bonus'] >= 0 ? '+' : '';
+            ?>
             <form method="POST" class="choice-form">
                 <?= Session::csrfField() ?>
-                <input type="hidden" name="action"          value="dragon_choose">
+                <input type="hidden" name="action"           value="dragon_choose">
                 <input type="hidden" name="dragon_choice_id" value="<?= (int)$choice['id'] ?>">
                 <button type="submit" class="choice-btn dragon-choice-btn">
+                    <span class="dragon-strategy-row">
+                        <span class="dragon-style-badge" style="color:<?= e($choice['style_color']) ?>;border-color:<?= e($choice['style_color']) ?>">
+                            <?= e($choice['style_label']) ?>
+                        </span>
+                        <span class="dragon-atk-mod" style="color:<?= e($choice['style_color']) ?>">
+                            <?= $bonusSign . $choice['attack_bonus'] ?> ATK
+                        </span>
+                    </span>
                     <span class="choice-text"><?= e($choice['choice_text']) ?></span>
                     <span class="choice-hint"><?= e($choice['hint_text']) ?></span>
                 </button>
@@ -849,40 +1250,85 @@ ob_start();
         </div>
 
         <p class="text-muted" style="font-size:0.78rem;margin-top:1.5rem;text-align:center">
-            ⚠ This is your one dragon challenge for today. Choose wisely.
+            ⚠ This is your one dragon battle for today. Choose wisely.
         </p>
 
     </div>
 
     <?php elseif ($state === 'dragon_result' && $result): ?>
     <!-- =====================================================
-         DRAGON RESULT — outcome screen
+         DRAGON RESULT — PvP-style combat log
     ===================================================== -->
-    <?php $ol = $outcomeLabels[$result['outcome']] ?? $outcomeLabels['failure']; ?>
-    <div class="adv-result dragon-result <?= $result['outcome'] ?>-result">
+    <?php
+    $battleResult = $result['battle_result'] ?? 'draw';
+    $dragonOutcomeConfig = [
+        'win'  => ['label' => 'Victory!',    'color' => '#fbbf24', 'icon' => '⚡', 'border' => '#8a6a1a'],
+        'loss' => ['label' => 'Defeated!',   'color' => '#ef4444', 'icon' => '💀', 'border' => '#7f1d1d'],
+        'draw' => ['label' => 'Standoff!',   'color' => '#a78bfa', 'icon' => '🤝', 'border' => '#4c3a8a'],
+    ];
+    $drOc   = $dragonOutcomeConfig[$battleResult] ?? $dragonOutcomeConfig['draw'];
+    $choice = $result['choice'] ?? [];
+    $roundsPlayed = max(0, ($result['round'] ?? 1) - 1);
+    ?>
+    <div class="adv-result dragon-result dragon-battle-result">
 
-        <div class="result-outcome-badge" style="color:<?= $ol['color'] ?>;border-color:<?= $ol['color'] ?>">
-            🐉 <?= $ol['icon'] ?> <?= $ol['label'] ?>
+        <div class="result-outcome-badge" style="color:<?= $drOc['color'] ?>;border-color:<?= $drOc['border'] ?>">
+            🐉 <?= $drOc['icon'] ?> <?= $drOc['label'] ?>
         </div>
 
         <h2 class="result-scenario-title">The Debt Dragon</h2>
-        <p class="result-choice-echo text-muted">You chose: <em><?= e($result['choice_text']) ?></em></p>
+        <p class="result-choice-echo text-muted">
+            Strategy: <em><?= e($choice['style_label'] ?? $choice['choice_text'] ?? '') ?></em>
+            · <?= $roundsPlayed ?> round<?= $roundsPlayed !== 1 ? 's' : '' ?>
+        </p>
 
-        <div class="result-roll-display">
-            <div class="roll-die">
-                <span class="roll-number"><?= $result['final_roll'] ?></span>
-                <span class="roll-label">Final Roll</span>
+        <!-- Final HP bars -->
+        <div class="dragon-hp-bars">
+            <?php
+            $rPlayerHp    = max(0, (int)($result['player_hp'] ?? $result['player_hp_end'] ?? 0));
+            $rPlayerMaxHp = max(1, (int)($result['player_max_hp'] ?? 1));
+            $rDragonHp    = max(0, (int)($result['dragon_hp'] ?? $result['dragon_hp_end'] ?? 0));
+            $rDragonMaxHp = max(1, (int)($result['dragon_max_hp'] ?? 1));
+            ?>
+            <div class="dragon-hp-row">
+                <span class="dragon-hp-label">You</span>
+                <div class="dragon-hp-track">
+                    <div class="dragon-hp-fill player-hp-fill"
+                         style="width:<?= round($rPlayerHp / $rPlayerMaxHp * 100) ?>%"></div>
+                </div>
+                <span class="dragon-hp-val"><?= $rPlayerHp ?> / <?= $rPlayerMaxHp ?></span>
             </div>
-            <div class="roll-breakdown">
-                <span>d20: <strong><?= $result['roll'] ?></strong></span>
-                <span>+ modifier: <strong><?= $result['modifier'] >= 0 ? '+' . $result['modifier'] : $result['modifier'] ?></strong></span>
-                <span>vs DC: <strong><?= $result['difficulty'] ?></strong></span>
+            <div class="dragon-hp-row">
+                <span class="dragon-hp-label">🐉 Dragon</span>
+                <div class="dragon-hp-track">
+                    <div class="dragon-hp-fill dragon-hp-fill-bar"
+                         style="width:<?= round($rDragonHp / $rDragonMaxHp * 100) ?>%"></div>
+                </div>
+                <span class="dragon-hp-val"><?= $rDragonHp ?> / <?= $rDragonMaxHp ?></span>
             </div>
         </div>
 
-        <div class="result-narrative"><?= nl2br(e($result['narrative'])) ?></div>
+        <!-- Full combat log (same format as PvP) -->
+        <?php $logLines = $result['log_lines'] ?? []; ?>
+        <?php if (!empty($logLines)): ?>
+        <div class="pvp-log card" style="margin-top:1.25rem">
+            <h4 class="pvp-log-title">🐉 Full Combat Log</h4>
+            <div class="pvp-log-body">
+                <?php foreach ($logLines as $line):
+                    $line = trim($line);
+                    if (empty($line)) continue;
+                    $lc = str_contains($line, '═══') ? 'log-defeat'
+                        : (str_contains($line, 'Initiative') ? 'log-init'
+                        : (str_contains($line, 'Hit!')  ? 'log-hit'
+                        : (str_contains($line, 'Miss!') ? 'log-miss' : '')));
+                ?>
+                <div class="log-line <?= $lc ?>"><?= e($line) ?></div>
+                <?php endforeach; ?>
+            </div>
+        </div>
+        <?php endif; ?>
 
-        <div class="result-rewards">
+        <div class="result-rewards" style="margin-top:1.25rem">
             <?php if ($result['action_restored']): ?>
                 <span class="reward-badge" style="color:#fbbf24;border-color:#8a6a1a;background:rgba(212,160,23,0.12)">
                     +1 ⚔ Action Restored
@@ -897,7 +1343,7 @@ ob_start();
                 </span>
             <?php elseif ($result['gold_delta'] < 0): ?>
                 <span class="reward-badge" style="color:#fca5a5;border-color:#7f1d1d;background:rgba(239,68,68,0.1)">
-                    <?= $result['gold_delta'] ?> 🪙 Gold
+                    <?= $result['gold_delta'] ?> 🪙 Gold lost
                 </span>
             <?php endif; ?>
         </div>

@@ -26,14 +26,16 @@ $db = Database::getInstance();
 // rather than letting PHP throw errors on protected pages.
 // =========================================================================
 if (Session::isLoggedIn()) {
-    $loginAt  = (int) Session::get('login_at', 0);
-    $maxAge   = SESSION_LIFETIME; // from config.php (default 7200 = 2 hours)
+    // Use last_activity_at for inactivity detection (sliding window).
+    // Falls back to login_at for sessions created before this change.
+    $lastActivity = (int) Session::get('last_activity_at', Session::get('login_at', 0));
+    $maxAge       = SESSION_LIFETIME; // from config.php (default 7200 = 2 hours)
 
-    if ($loginAt > 0 && (time() - $loginAt) > $maxAge) {
-        // Session has exceeded lifetime — log out cleanly
+    if ($lastActivity > 0 && (time() - $lastActivity) > $maxAge) {
+        // Inactive for longer than SESSION_LIFETIME — log out cleanly
         Session::logout();
         Session::start();
-        Session::setFlash('info', 'Your session expired. Please log in again.');
+        Session::setFlash('info', 'Your session expired due to inactivity. Please log in again.');
 
         // Only redirect if not already on a guest page
         $guestPages = ['login.php', 'register.php', '404.php'];
