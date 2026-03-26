@@ -34,6 +34,67 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         redirect('/admin/adventures.php');
     }
 
+    // --- Upload illustration ---
+    if ($action === 'upload_image') {
+        $sid = (int)$_POST['scenario_id'];
+        $exists = $db->fetchValue("SELECT id FROM adventure_scenarios WHERE id = ?", [$sid]);
+        if (!$exists) {
+            Session::setFlash('error', 'Scenario not found.');
+            redirect('/admin/adventures.php');
+        }
+
+        $errCodes = [
+            UPLOAD_ERR_INI_SIZE   => 'File exceeds server upload limit.',
+            UPLOAD_ERR_FORM_SIZE  => 'File exceeds form size limit.',
+            UPLOAD_ERR_PARTIAL    => 'Upload incomplete — try again.',
+            UPLOAD_ERR_NO_FILE    => 'No file selected.',
+            UPLOAD_ERR_NO_TMP_DIR => 'Server missing temp directory.',
+            UPLOAD_ERR_CANT_WRITE => 'Server failed to write temp file.',
+        ];
+        $errCode = $_FILES['scenario_img']['error'] ?? UPLOAD_ERR_NO_FILE;
+        if ($errCode !== UPLOAD_ERR_OK) {
+            Session::setFlash('error', $errCodes[$errCode] ?? 'Upload failed (code ' . $errCode . ').');
+            redirect('/admin/adventures.php?edit=' . $sid);
+        }
+
+        $finfo = new finfo(FILEINFO_MIME_TYPE);
+        $mime  = $finfo->file($_FILES['scenario_img']['tmp_name']);
+        if (!in_array($mime, ['image/jpeg', 'image/jpg'], true)) {
+            Session::setFlash('error', 'Only JPEG images are accepted. Convert to JPEG via squoosh.app first.');
+            redirect('/admin/adventures.php?edit=' . $sid);
+        }
+        if ($_FILES['scenario_img']['size'] > 5 * 1024 * 1024) {
+            Session::setFlash('error', 'File too large (max 5 MB). Optimise with squoosh.app first.');
+            redirect('/admin/adventures.php?edit=' . $sid);
+        }
+
+        $destDir = ROOT_PATH . '/assets/img/adventures/';
+        if (!is_dir($destDir)) {
+            mkdir($destDir, 0755, true);
+        }
+        $dest = $destDir . 'scenario_' . $sid . '.jpg';
+        if (!move_uploaded_file($_FILES['scenario_img']['tmp_name'], $dest)) {
+            Session::setFlash('error', 'Failed to save file — check directory permissions on assets/img/adventures/.');
+            redirect('/admin/adventures.php?edit=' . $sid);
+        }
+
+        Session::setFlash('success', 'Illustration uploaded.');
+        redirect('/admin/adventures.php?edit=' . $sid);
+    }
+
+    // --- Delete illustration ---
+    if ($action === 'delete_image') {
+        $sid  = (int)$_POST['scenario_id'];
+        $path = ROOT_PATH . '/assets/img/adventures/scenario_' . $sid . '.jpg';
+        if (file_exists($path)) {
+            unlink($path);
+            Session::setFlash('success', 'Illustration removed.');
+        } else {
+            Session::setFlash('info', 'No illustration found to remove.');
+        }
+        redirect('/admin/adventures.php?edit=' . $sid);
+    }
+
     // --- Delete scenario + choices ---
     if ($action === 'delete') {
         $sid = (int)$_POST['scenario_id'];
@@ -212,6 +273,30 @@ $scenarios = $db->fetchAll(
      GROUP BY ads.id
      ORDER BY ads.category, ads.title"
 );
+
+// Build set of scenario IDs that have an illustration on disk
+$imgDir = ROOT_PATH . '/assets/img/adventures/';
+$scenarioImgIds = [];
+if (is_dir($imgDir)) {
+    foreach (glob($imgDir . 'scenario_*.jpg') ?: [] as $f) {
+        if (preg_match('/scenario_(\d+)\.jpg$/', $f, $m)) {
+            $scenarioImgIds[(int)$m[1]] = true;
+        }
+    }
+}
+
+// For the edit view, resolve current image details
+$editImgPath = null;
+$editImgUrl  = null;
+$editImgSize = null;
+if ($editScenario) {
+    $p = $imgDir . 'scenario_' . $editScenario['id'] . '.jpg';
+    if (file_exists($p)) {
+        $editImgPath = $p;
+        $editImgUrl  = BASE_URL . '/assets/img/adventures/scenario_' . $editScenario['id'] . '.jpg';
+        $editImgSize = round(filesize($p) / 1024) . ' KB';
+    }
+}
 
 // =========================================================================
 // RENDER HELPERS — reusable choice block HTML
@@ -396,6 +481,70 @@ ob_start();
         </form>
     </div>
 
+    <!-- =================================================================
+         ILLUSTRATION MANAGER (edit view only)
+    ================================================================= -->
+    <div class="card mb-3" style="padding:1.5rem">
+        <h3 style="margin-bottom:1.25rem">🖼 Scenario Illustration</h3>
+
+        <?php if ($editImgUrl): ?>
+        <div style="display:flex;align-items:flex-start;gap:1.5rem;flex-wrap:wrap;margin-bottom:1.5rem">
+            <img src="<?= e($editImgUrl) ?>"
+                 alt="Current illustration"
+                 style="max-width:320px;width:100%;border-radius:var(--radius);
+                        border:1px solid var(--color-border);display:block">
+            <div>
+                <p style="font-family:var(--font-heading);font-size:0.78rem;
+                          letter-spacing:0.06em;text-transform:uppercase;
+                          color:var(--color-text-muted);margin-bottom:0.35rem">Current file</p>
+                <p style="font-size:0.88rem;color:var(--color-text);
+                          font-family:monospace;margin-bottom:0.25rem">
+                    assets/img/adventures/scenario_<?= $editScenario['id'] ?>.jpg
+                </p>
+                <p class="text-muted" style="font-size:0.82rem;margin-bottom:1rem">
+                    💾 <?= $editImgSize ?>
+                </p>
+                <form method="POST"
+                      onsubmit="return confirm('Remove this illustration?')">
+                    <?= Session::csrfField() ?>
+                    <input type="hidden" name="action"      value="delete_image">
+                    <input type="hidden" name="scenario_id" value="<?= $editScenario['id'] ?>">
+                    <button type="submit"
+                            style="background:none;border:1px solid var(--color-red);
+                                   color:var(--color-red);border-radius:var(--radius);
+                                   padding:0.35rem 0.85rem;font-size:0.8rem;cursor:pointer">
+                        🗑 Remove Illustration
+                    </button>
+                </form>
+            </div>
+        </div>
+        <?php else: ?>
+        <p class="text-muted" style="margin-bottom:1.25rem">
+            No illustration uploaded yet. Recommended: <strong>832 × 468 px JPEG</strong>, optimised via
+            <a href="https://squoosh.app" target="_blank" rel="noopener"
+               style="color:var(--color-gold)">squoosh.app ↗</a> to under 200 KB.
+        </p>
+        <?php endif; ?>
+
+        <form method="POST" enctype="multipart/form-data">
+            <?= Session::csrfField() ?>
+            <input type="hidden" name="action"      value="upload_image">
+            <input type="hidden" name="scenario_id" value="<?= $editScenario['id'] ?>">
+            <div class="form-group" style="margin-bottom:0.75rem">
+                <label><?= $editImgUrl ? 'Replace illustration' : 'Upload illustration' ?>
+                    <span class="text-muted">(JPEG only · max 5 MB)</span>
+                </label>
+                <input type="file" name="scenario_img"
+                       accept="image/jpeg,image/jpg,.jpg,.jpeg"
+                       required
+                       style="display:block;margin-top:0.4rem;color:var(--color-text)">
+            </div>
+            <button type="submit" class="btn btn-primary">
+                ↑ <?= $editImgUrl ? 'Replace' : 'Upload' ?>
+            </button>
+        </form>
+    </div>
+
     <?php else: ?>
     <!-- =====================================================================
          ADD SCENARIO FORM
@@ -489,6 +638,7 @@ ob_start();
             <thead>
                 <tr>
                     <th>Scenario</th>
+                    <th style="width:52px;text-align:center">Img</th>
                     <th>Category</th>
                     <th>Level Range</th>
                     <th>Choices</th>
@@ -499,8 +649,9 @@ ob_start();
             </thead>
             <tbody>
                 <?php foreach ($scenarios as $s):
-                    $cat = $categoryMeta[$s['category']] ?? ['icon' => '⚔', 'label' => $s['category']];
+                    $cat    = $categoryMeta[$s['category']] ?? ['icon' => '⚔', 'label' => $s['category']];
                     $isEditing = $editScenario && $editScenario['id'] == $s['id'];
+                    $hasImg = isset($scenarioImgIds[$s['id']]);
                 ?>
                 <tr class="<?= !$s['is_active'] ? 'row-inactive' : '' ?> <?= $isEditing ? 'row-editing' : '' ?>">
                     <td>
@@ -509,6 +660,20 @@ ob_start();
                         <br><small class="text-muted">
                             "<?= e(mb_substr($s['flavor_text'], 0, 55)) ?><?= mb_strlen($s['flavor_text']) > 55 ? '…' : '' ?>"
                         </small>
+                        <?php endif; ?>
+                    </td>
+                    <td style="text-align:center;padding:0.25rem">
+                        <?php if ($hasImg): ?>
+                        <a href="<?= BASE_URL ?>/admin/adventures.php?edit=<?= $s['id'] ?>"
+                           title="View/replace illustration">
+                            <img src="<?= BASE_URL ?>/assets/img/adventures/scenario_<?= $s['id'] ?>.jpg"
+                                 alt="" width="44" height="25"
+                                 style="display:block;object-fit:cover;border-radius:3px;
+                                        border:1px solid var(--color-border)">
+                        </a>
+                        <?php else: ?>
+                        <span style="color:var(--color-text-dim);font-size:0.75rem"
+                              title="No illustration">—</span>
                         <?php endif; ?>
                     </td>
                     <td><?= $cat['icon'] ?> <?= $cat['label'] ?></td>
