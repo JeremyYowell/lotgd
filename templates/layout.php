@@ -94,6 +94,7 @@
     <p>
         Legends of the Green Dollar &nbsp;·&nbsp;
         <?= IS_DEV ? '<span class="env-tag">' . APP_ENV . '</span>' : '&copy; ' . date('Y') ?>
+        &nbsp;·&nbsp; <a href="<?= BASE_URL ?>/pages/privacy.php" class="footer-privacy-link">Privacy Policy</a>
         <?php if (Session::isLoggedIn()): ?>
         &nbsp;·&nbsp; <a href="<?= BASE_URL ?>/pages/bug_report.php" class="footer-bug-link">🐛 Report a Bug</a>
         <?php endif; ?>

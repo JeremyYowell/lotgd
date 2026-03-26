@@ -73,6 +73,7 @@ if ($confirmationEnabled && Session::isLoggedIn()) {
         'logout.php',
         'login.php',
         'register.php',
+        'privacy.php',
         '404.php',
     ];
     $currentPage = basename($_SERVER['SCRIPT_FILENAME'] ?? '');

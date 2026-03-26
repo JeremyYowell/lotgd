@@ -157,6 +157,13 @@ ob_start();
                 <button type="submit" class="btn btn-primary btn-full">
                     🏰 Create My Character
                 </button>
+                <p style="margin-top:0.75rem;font-size:0.8rem;color:var(--color-text-dim);text-align:center">
+                    By registering you agree that your email is used only for account
+                    purposes and will never be shared.
+                    <a href="<?= BASE_URL ?>/pages/privacy.php"
+                       style="color:var(--color-text-muted);text-decoration:underline"
+                       target="_blank">Privacy Policy</a>
+                </p>
             </div>
         </form>
     </div>
