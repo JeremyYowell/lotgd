@@ -669,7 +669,7 @@ input::placeholder { color: var(--color-text-dim); }
     color: var(--color-text-muted);
     line-height: 1.5;
 }
-.onboard-tip-body strong {
+.onboard-tip-body > strong:first-child {
     display: block;
     color: var(--color-text);
     font-family: var(--font-heading);

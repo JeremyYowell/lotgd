@@ -13,6 +13,8 @@ if (!(bool)$db->getSetting('store_enabled', '1')) {
 $userModel = new User();
 $store     = new Store();
 $userId    = Session::userId();
+
+Onboarding::dismiss($userId, 'onboard_store');
 $user      = $userModel->findById($userId);
 
 // =========================================================================
@@ -166,7 +168,6 @@ ob_start();
         <strong>Consumables</strong> are single-use items you can activate for big one-time effects.
         Higher-level gear unlocks as you level up.
     </div>
-    <button class="onboard-tip-dismiss" aria-label="Dismiss">✕</button>
 </div>
 <?php endif; ?>
 
