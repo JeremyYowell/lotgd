@@ -297,6 +297,86 @@ class Store {
     }
 
     // =========================================================================
+    // ADMIN TOOLS
+    // =========================================================================
+
+    /**
+     * Admin: grant an item directly to a player, bypassing level/gold checks.
+     * Equipment: replaces slot if occupied by a different item.
+     * Consumable: increments quantity with no cap.
+     */
+    public static function adminGiveItem(int $userId, int $itemId): array {
+        $db   = Database::getInstance();
+        $item = $db->fetchOne("SELECT * FROM store_items WHERE id = ?", [$itemId]);
+
+        if (!$item) {
+            return ['success' => false, 'message' => 'Item not found.'];
+        }
+
+        $db->beginTransaction();
+        try {
+            if ($item['category'] === 'consumable') {
+                $existing = $db->fetchOne(
+                    "SELECT * FROM user_inventory WHERE user_id = ? AND item_id = ?",
+                    [$userId, $item['id']]
+                );
+                if ($existing) {
+                    $db->run(
+                        "UPDATE user_inventory SET quantity = quantity + 1 WHERE id = ?",
+                        [$existing['id']]
+                    );
+                    $msg = $item['name'] . ' quantity increased (now ' . ($existing['quantity'] + 1) . ').';
+                } else {
+                    $db->run(
+                        "INSERT INTO user_inventory (user_id, item_id, quantity, equipped) VALUES (?, ?, 1, 1)",
+                        [$userId, $item['id']]
+                    );
+                    $msg = $item['name'] . ' added to inventory.';
+                }
+            } else {
+                // Equipment — find existing item in this slot
+                $existing = $db->fetchOne(
+                    "SELECT ui.id, ui.item_id, si.name AS old_name
+                     FROM user_inventory ui
+                     JOIN store_items si ON si.id = ui.item_id
+                     WHERE ui.user_id = ? AND si.slot = ? AND si.category != 'consumable'",
+                    [$userId, $item['slot']]
+                );
+                if ($existing) {
+                    if ((int)$existing['item_id'] === (int)$item['id']) {
+                        $db->rollBack();
+                        return ['success' => false, 'message' => 'Player already has ' . $item['name'] . ' equipped.'];
+                    }
+                    $db->run(
+                        "UPDATE user_inventory SET item_id = ?, acquired_at = NOW() WHERE id = ?",
+                        [$item['id'], $existing['id']]
+                    );
+                    $msg = $item['name'] . ' equipped, replacing ' . $existing['old_name'] . '.';
+                } else {
+                    $db->run(
+                        "INSERT INTO user_inventory (user_id, item_id, quantity, equipped) VALUES (?, ?, 1, 1)",
+                        [$userId, $item['id']]
+                    );
+                    $msg = $item['name'] . ' equipped.';
+                }
+            }
+
+            $db->commit();
+            appLog('info', 'Admin gave item', [
+                'admin_id'    => Session::userId(),
+                'target_user' => $userId,
+                'item'        => $item['name'],
+            ]);
+            return ['success' => true, 'message' => $msg];
+
+        } catch (Exception $e) {
+            $db->rollBack();
+            appLog('error', 'Admin give item failed', ['error' => $e->getMessage()]);
+            return ['success' => false, 'message' => 'Transaction failed.'];
+        }
+    }
+
+    // =========================================================================
     // EFFECT CALCULATION (called by Adventure engine)
     // =========================================================================
 

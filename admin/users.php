@@ -11,8 +11,33 @@ Session::requireAdmin();
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     Session::verifyCsrfPost();
 
-    $action    = $_POST['action']  ?? '';
-    $targetId  = (int)($_POST['user_id'] ?? 0);
+    $action   = $_POST['action']  ?? '';
+    $targetId = (int)($_POST['user_id'] ?? 0);
+
+    // Give actions are allowed on any valid user (including self, for testing)
+    if ($targetId && $action === 'give_gold') {
+        $allowed = [50, 100, 500, 5000];
+        $amount  = (int)($_POST['amount'] ?? 0);
+        if (in_array($amount, $allowed, true)) {
+            $db->run("UPDATE users SET gold = gold + ? WHERE id = ?", [$amount, $targetId]);
+            $uname = $db->fetchValue("SELECT username FROM users WHERE id = ?", [$targetId]);
+            Session::setFlash('success', number_format($amount) . ' Gold granted to ' . $uname . '.');
+        } else {
+            Session::setFlash('error', 'Invalid gold amount.');
+        }
+        redirect('/admin/users.php' . (isset($_GET['page']) ? '?page=' . (int)$_GET['page'] : ''));
+    }
+
+    if ($targetId && $action === 'give_item') {
+        $itemId = (int)($_POST['item_id'] ?? 0);
+        if ($itemId) {
+            $result = Store::adminGiveItem($targetId, $itemId);
+            Session::setFlash($result['success'] ? 'success' : 'error', $result['message']);
+        } else {
+            Session::setFlash('error', 'No item selected.');
+        }
+        redirect('/admin/users.php' . (isset($_GET['page']) ? '?page=' . (int)$_GET['page'] : ''));
+    }
 
     if ($targetId && $targetId !== Session::userId()) {
 
@@ -86,6 +111,32 @@ $users = $db->fetchAll(
     $params
 );
 
+// Load store catalog for Give Item dropdown
+$store    = new Store();
+$catalog  = $store->getCatalog();
+$catalogByCategory = [];
+foreach ($catalog as $it) {
+    $catalogByCategory[$it['category']][] = $it;
+}
+
+// Pre-fetch inventory for all users on this page
+$userIds = array_column($users, 'id');
+$inventoryByUser = [];
+if ($userIds) {
+    $placeholders = implode(',', array_fill(0, count($userIds), '?'));
+    $invRows = $db->fetchAll(
+        "SELECT ui.user_id, si.name, si.category, si.slot, ui.quantity
+         FROM user_inventory ui
+         JOIN store_items si ON si.id = ui.item_id
+         WHERE ui.user_id IN ({$placeholders})
+         ORDER BY si.category, si.sort_order",
+        $userIds
+    );
+    foreach ($invRows as $row) {
+        $inventoryByUser[$row['user_id']][] = $row;
+    }
+}
+
 $pageTitle = 'User Management';
 $bodyClass = 'page-admin';
 $extraCss  = ['admin.css'];
@@ -157,6 +208,10 @@ ob_start();
                     <td>
                         <?php if ($u['id'] !== Session::userId()): ?>
                         <div class="admin-action-row">
+                            <button class="btn-admin-action give-btn"
+                                    data-user-id="<?= $u['id'] ?>"
+                                    data-username="<?= e($u['username']) ?>"
+                                    type="button">🎁 Give</button>
                             <?php if (!$u['email_confirmed']): ?>
                             <form method="POST">
                                 <?= Session::csrfField() ?>
@@ -218,7 +273,145 @@ ob_start();
 
 </div>
 
+<!-- GIVE MODAL -->
+<div id="give-modal-backdrop" class="give-modal-backdrop" style="display:none" role="dialog" aria-modal="true">
+    <div class="give-modal">
+        <div class="give-modal-header">
+            <span id="give-modal-title" class="give-modal-username"></span>
+            <button type="button" class="give-modal-close" id="give-modal-close" aria-label="Close">✕</button>
+        </div>
+
+        <!-- Inventory -->
+        <div class="give-modal-inv-label">Current Inventory</div>
+        <div id="give-modal-inventory" class="give-modal-inventory"></div>
+
+        <!-- Tabs -->
+        <div class="give-tabs">
+            <button type="button" class="give-tab active" data-tab="gold">💰 Gold</button>
+            <button type="button" class="give-tab" data-tab="item">🛡️ Item</button>
+        </div>
+
+        <!-- Gold panel -->
+        <div class="give-panel" id="give-panel-gold">
+            <form method="POST" class="give-form">
+                <?= Session::csrfField() ?>
+                <input type="hidden" name="action"  value="give_gold">
+                <input type="hidden" name="user_id" class="modal-user-id" value="">
+                <div class="give-row">
+                    <select name="amount" class="give-select">
+                        <option value="50">50 Gold</option>
+                        <option value="100">100 Gold</option>
+                        <option value="500">500 Gold</option>
+                        <option value="5000">5,000 Gold</option>
+                    </select>
+                    <button type="submit" class="btn btn-primary give-submit">Grant</button>
+                </div>
+            </form>
+        </div>
+
+        <!-- Item panel -->
+        <div class="give-panel" id="give-panel-item" style="display:none">
+            <form method="POST" class="give-form">
+                <?= Session::csrfField() ?>
+                <input type="hidden" name="action"  value="give_item">
+                <input type="hidden" name="user_id" class="modal-user-id" value="">
+                <div class="give-row">
+                    <select name="item_id" class="give-select">
+                        <?php foreach ($catalogByCategory as $cat => $items): ?>
+                        <optgroup label="<?= ucfirst($cat) ?>">
+                            <?php foreach ($items as $it): ?>
+                            <option value="<?= $it['id'] ?>"><?= e($it['name']) ?> (Lv<?= $it['level_req'] ?>)</option>
+                            <?php endforeach; ?>
+                        </optgroup>
+                        <?php endforeach; ?>
+                    </select>
+                    <button type="submit" class="btn btn-primary give-submit">Grant</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
 <?php
 $pageContent = ob_get_clean();
+
+// Inventory data for JS
+$invJs = [];
+foreach ($inventoryByUser as $uid => $items) {
+    $invJs[$uid] = array_map(fn($r) => [
+        'name'     => $r['name'],
+        'category' => $r['category'],
+        'slot'     => $r['slot'],
+        'qty'      => (int)$r['quantity'],
+    ], $items);
+}
+
+$extraScripts = '<script>
+(function () {
+    var inv = ' . json_encode($invJs) . ';
+    var backdrop = document.getElementById("give-modal-backdrop");
+    var closeBtn = document.getElementById("give-modal-close");
+
+    document.querySelectorAll(".give-btn").forEach(function (btn) {
+        btn.addEventListener("click", function () {
+            var uid      = this.dataset.userId;
+            var uname    = this.dataset.username;
+
+            // Set username in header
+            document.getElementById("give-modal-title").textContent = "Give to " + uname;
+
+            // Set user_id in all hidden inputs
+            backdrop.querySelectorAll(".modal-user-id").forEach(function (el) {
+                el.value = uid;
+            });
+
+            // Render inventory
+            var invEl  = document.getElementById("give-modal-inventory");
+            var items  = inv[uid] || [];
+            if (items.length === 0) {
+                invEl.innerHTML = "<em class=\"give-inv-empty\">No items</em>";
+            } else {
+                invEl.innerHTML = items.map(function (it) {
+                    var label = it.category === "consumable"
+                        ? it.name + " ×" + it.qty
+                        : it.name + " <span class=\"give-inv-slot\">(" + it.slot + ")</span>";
+                    return "<span class=\"give-inv-item\">" + label + "</span>";
+                }).join("");
+            }
+
+            // Reset to gold tab
+            showTab("gold");
+            backdrop.style.display = "flex";
+        });
+    });
+
+    closeBtn.addEventListener("click", closeModal);
+    backdrop.addEventListener("click", function (e) {
+        if (e.target === backdrop) closeModal();
+    });
+    document.addEventListener("keydown", function (e) {
+        if (e.key === "Escape") closeModal();
+    });
+
+    function closeModal() {
+        backdrop.style.display = "none";
+    }
+
+    document.querySelectorAll(".give-tab").forEach(function (tab) {
+        tab.addEventListener("click", function () {
+            showTab(this.dataset.tab);
+        });
+    });
+
+    function showTab(name) {
+        document.querySelectorAll(".give-tab").forEach(function (t) {
+            t.classList.toggle("active", t.dataset.tab === name);
+        });
+        document.getElementById("give-panel-gold").style.display = name === "gold" ? "" : "none";
+        document.getElementById("give-panel-item").style.display = name === "item" ? "" : "none";
+    }
+}());
+</script>';
+
 require TPL_PATH . '/layout.php';
 ?>
