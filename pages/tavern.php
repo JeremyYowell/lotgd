@@ -171,6 +171,19 @@ ob_start();
 
 <div class="tavern-wrap">
 
+<?php if (!Onboarding::isDismissed($userId, 'onboard_tavern')): ?>
+<div class="onboard-tip" data-onboard-flag="onboard_tavern">
+    <span class="onboard-tip-icon">🍺</span>
+    <div class="onboard-tip-body">
+        <strong>The community board</strong>
+        Post wins, ask questions, or just talk shop with fellow adventurers.
+        One post per minute, up to 500 characters. Messages are visible to all logged-in players.
+        Admins can pin important announcements. Keep it civil — the innkeeper has a short temper.
+    </div>
+    <button class="onboard-tip-dismiss" aria-label="Dismiss">✕</button>
+</div>
+<?php endif; ?>
+
     <!-- HEADER -->
     <div class="tavern-header">
         <div class="tavern-title-block">

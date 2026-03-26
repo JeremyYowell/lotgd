@@ -16,11 +16,11 @@ if (!(bool) $db->getSetting('registration_open', '1')) {
 $errors = [];
 
 $classes = [
-    'investor'    => ['icon' => '📈', 'name' => 'The Investor',    'desc' => 'Bonus XP for every dollar invested'],
-    'debt_slayer' => ['icon' => '🗡️',  'name' => 'Debt Slayer',    'desc' => 'Bonus XP for every dollar of debt paid'],
-    'saver'       => ['icon' => '🏦', 'name' => 'The Saver',       'desc' => 'Bonus XP for building savings'],
-    'entrepreneur'=> ['icon' => '🚀', 'name' => 'Entrepreneur',    'desc' => 'Bonus XP for new income sources'],
-    'minimalist'  => ['icon' => '🧘', 'name' => 'The Minimalist',  'desc' => 'Bonus XP for cutting expenses'],
+    'investor'    => ['icon' => '📈', 'name' => 'The Investor',    'desc' => '+3 on Investing adventures'],
+    'debt_slayer' => ['icon' => '🗡️',  'name' => 'Debt Slayer',    'desc' => '+3 on Banking & Shopping adventures'],
+    'saver'       => ['icon' => '🏦', 'name' => 'The Saver',       'desc' => '+3 on Shopping & Daily Life adventures'],
+    'entrepreneur'=> ['icon' => '🚀', 'name' => 'Entrepreneur',    'desc' => '+3 on Work adventures'],
+    'minimalist'  => ['icon' => '🧘', 'name' => 'The Minimalist',  'desc' => '+3 on Shopping & Daily Life adventures'],
 ];
 
 // =========================================================================

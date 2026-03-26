@@ -179,6 +179,21 @@ ob_start();
 
 <div class="pvp-wrap">
 
+<?php if (!Onboarding::isDismissed($userId, 'onboard_pvp')): ?>
+<div class="onboard-tip" data-onboard-flag="onboard_pvp">
+    <span class="onboard-tip-icon">⚔️</span>
+    <div class="onboard-tip-body">
+        <strong>Challenge other adventurers</strong>
+        You can challenge players at your level or higher — one challenge per target per day.
+        Combat is turn-based: each round both players roll d20 + modifiers.
+        Initiative determines who strikes first each round.
+        Battles last up to <strong>10 rounds</strong> — if nobody falls, it's a draw.
+        Gear makes a real difference here: weapons boost attack, armor boosts HP and defense.
+    </div>
+    <button class="onboard-tip-dismiss" aria-label="Dismiss">✕</button>
+</div>
+<?php endif; ?>
+
     <div class="pvp-header">
         <div>
             <h1>⚔ PvP Combat</h1>

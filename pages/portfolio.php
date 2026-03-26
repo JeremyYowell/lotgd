@@ -120,6 +120,19 @@ ob_start();
 
 <div class="port-wrap">
 
+<?php if (!Onboarding::isDismissed($userId, 'onboard_portfolio')): ?>
+<div class="onboard-tip" data-onboard-flag="onboard_portfolio">
+    <span class="onboard-tip-icon">💰</span>
+    <div class="onboard-tip-body">
+        <strong>Your simulated portfolio</strong>
+        Trade real S&amp;P 500 stocks using Gold. <strong>1 Gold = $1,000 USD.</strong>
+        Prices use previous-close data. Fractional shares are supported — you don't need to buy a whole share.
+        Your goal: outperform the S&amp;P 500 (SPY benchmark). Portfolio returns feed directly into the leaderboard.
+    </div>
+    <button class="onboard-tip-dismiss" aria-label="Dismiss">✕</button>
+</div>
+<?php endif; ?>
+
     <div class="port-header">
         <div>
             <h1>📊 Your Portfolio</h1>

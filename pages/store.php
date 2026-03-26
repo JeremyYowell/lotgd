@@ -156,6 +156,20 @@ ob_start();
 
 <div class="store-wrap">
 
+<?php if (!Onboarding::isDismissed($userId, 'onboard_store')): ?>
+<div class="onboard-tip" data-onboard-flag="onboard_store">
+    <span class="onboard-tip-icon">🛡️</span>
+    <div class="onboard-tip-body">
+        <strong>Gear up before you adventure</strong>
+        Equip one <strong>Weapon</strong>, one <strong>Armor</strong>, and one <strong>Tool</strong>.
+        Weapons boost your attack in PvP, Armor increases your HP, and Tools add flat bonuses to adventure rolls.
+        <strong>Consumables</strong> are single-use items you can activate for big one-time effects.
+        Higher-level gear unlocks as you level up.
+    </div>
+    <button class="onboard-tip-dismiss" aria-label="Dismiss">✕</button>
+</div>
+<?php endif; ?>
+
     <!-- HEADER -->
     <div class="store-header">
         <div>

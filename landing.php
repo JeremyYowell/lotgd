@@ -1,13 +1,61 @@
+<?php
+require_once __DIR__ . '/bootstrap.php';
+// Dynamic adventure count — safe read-only aggregate, no user input
+$adventureCount        = (int)($db->fetchValue("SELECT COUNT(*) FROM adventure_log") ?: 0);
+$adventureCountDisplay = $adventureCount >= 1000
+    ? number_format(round($adventureCount / 100) * 100) . '+'
+    : ($adventureCount > 0 ? $adventureCount . '+' : '0');
+?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Legends of the Green Dollar — The Financial RPG</title>
-<meta name="description" content="A multiplayer fantasy RPG. Go on adventures, build an S&P 500 portfolio, and compete for glory in the Realm of Fiscal Destiny.">
-<meta property="og:title" content="Legends of the Green Dollar">
-<meta property="og:description" content="A multiplayer fantasy RPG. Adventure, invest, equip, and compete.">
-<meta property="og:type" content="website">
+<meta name="description" content="A free multiplayer RPG with old-school throwbacks, real-world financial scenarios, PvP, quests, and items. Climb to the leaderboard, slay a dragon, defeat other adventurers, and achieve the highest portfolio returns!">
+<meta name="robots" content="<?= IS_DEV ? 'noindex,nofollow' : 'index,follow' ?>">
+<link rel="canonical" href="https://lotgd.money/">
+
+<!-- Open Graph -->
+<meta property="og:type"        content="website">
+<meta property="og:url"         content="https://lotgd.money/">
+<meta property="og:title"       content="Legends of the Green Dollar — The Financial RPG">
+<meta property="og:description" content="A free multiplayer RPG with old-school throwbacks, real-world financial scenarios, PvP, quests, and items. Climb to the leaderboard, slay a dragon, defeat other adventurers, and achieve the highest portfolio returns!">
+<meta property="og:image"       content="https://lotgd.money/assets/img/landing/screenshot-dashboard.png">
+
+<!-- Twitter Card -->
+<meta name="twitter:card"        content="summary_large_image">
+<meta name="twitter:title"       content="Legends of the Green Dollar — The Financial RPG">
+<meta name="twitter:description" content="A free multiplayer RPG with old-school throwbacks, real-world financial scenarios, PvP, quests, and items. Climb to the leaderboard, slay a dragon, defeat other adventurers, and achieve the highest portfolio returns!">
+<meta name="twitter:image"       content="https://lotgd.money/assets/img/landing/screenshot-dashboard.png">
+
+<!-- Schema.org VideoGame -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "VideoGame",
+  "name": "Legends of the Green Dollar",
+  "alternateName": "LotGD",
+  "url": "https://lotgd.money/",
+  "description": "A free multiplayer RPG with old-school throwbacks, real-world financial scenarios, PvP combat, quests, and items. Build an S&P 500 portfolio with in-game gold. Climb the leaderboard and achieve the highest portfolio returns.",
+  "genre": ["Role-playing game", "Strategy", "Educational", "Multiplayer"],
+  "applicationCategory": "Game",
+  "gamePlatform": "Web browser",
+  "operatingSystem": "Any",
+  "numberOfPlayers": { "@type": "QuantitativeValue", "minValue": 1 },
+  "offers": {
+    "@type": "Offer",
+    "price": "0",
+    "priceCurrency": "USD",
+    "availability": "https://schema.org/InStock"
+  },
+  "publisher": {
+    "@type": "Organization",
+    "name": "Legends of the Green Dollar",
+    "url": "https://lotgd.money/"
+  }
+}
+</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@700&family=Cinzel:wght@400;600;700&family=Crimson+Pro:ital,wght@0,300;0,400;0,600;1,300;1,400&display=swap" rel="stylesheet">
@@ -970,9 +1018,65 @@ body::before {
     .screenshot-grid  { grid-template-columns: 1fr 1fr; }
 }
 
+/* ============================================================
+   HAMBURGER / MOBILE NAV
+============================================================ */
+.nav-hamburger {
+    display: none;
+    flex-direction: column;
+    justify-content: center;
+    gap: 5px;
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 0.4rem;
+    z-index: 200;
+}
+.nav-hamburger span {
+    display: block;
+    width: 22px;
+    height: 2px;
+    background: var(--gold-light);
+    border-radius: 2px;
+    transition: transform 0.3s, opacity 0.3s;
+}
+.nav-hamburger.is-open span:nth-child(1) { transform: translateY(7px) rotate(45deg); }
+.nav-hamburger.is-open span:nth-child(2) { opacity: 0; }
+.nav-hamburger.is-open span:nth-child(3) { transform: translateY(-7px) rotate(-45deg); }
+
 @media (max-width: 640px) {
     .site-nav         { padding: 1rem 1.25rem; }
-    .nav-links        { display: none; }
+    .nav-hamburger    { display: flex; }
+    .nav-links {
+        display: none;
+        position: fixed;
+        top: 57px;
+        left: 0;
+        right: 0;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0;
+        background: rgba(7, 9, 15, 0.98);
+        backdrop-filter: blur(16px);
+        border-bottom: 1px solid var(--border-gold);
+        padding: 0.75rem 0;
+        z-index: 150;
+    }
+    .nav-links.nav-open   { display: flex; }
+    .nav-links a {
+        display: block;
+        width: 100%;
+        padding: 0.85rem 1.5rem;
+        font-size: 0.8rem;
+        border-bottom: 1px solid rgba(30,45,69,0.5);
+    }
+    .nav-links a:last-child { border-bottom: none; }
+    .nav-cta {
+        margin: 0.75rem 1.5rem;
+        width: calc(100% - 3rem);
+        text-align: center;
+        border-radius: 4px;
+    }
     .class-grid       { grid-template-columns: repeat(2, 1fr); }
     .screenshot-grid  { grid-template-columns: 1fr; }
     .brief-stats-row  { grid-template-columns: repeat(3, 1fr); }
@@ -985,12 +1089,17 @@ body::before {
 <body>
 
 <!-- NAV -->
-<nav class="site-nav">
+<nav class="site-nav" id="site-nav">
     <div class="nav-brand">⚔ LotGD</div>
-    <div class="nav-links">
-        <a href="#features">Features</a>
-        <a href="#how-it-works">How It Works</a>
-        <a href="#adventure">Adventure</a>
+    <button class="nav-hamburger" id="nav-hamburger"
+            aria-label="Toggle navigation" aria-expanded="false"
+            onclick="toggleMobileNav(this)">
+        <span></span><span></span><span></span>
+    </button>
+    <div class="nav-links" id="nav-links">
+        <a href="#features"      onclick="closeMobileNav()">Features</a>
+        <a href="#how-it-works"  onclick="closeMobileNav()">How It Works</a>
+        <a href="#adventure"     onclick="closeMobileNav()">Adventure</a>
         <a href="pages/login.php">Sign In</a>
         <a href="pages/register.php" class="nav-cta">Join the Realm</a>
     </div>
@@ -1007,7 +1116,7 @@ body::before {
     <h1 class="hero-title">Legends of the<br>Green Dollar</h1>
     <p class="hero-subtitle">Where Fortune Favors the Prepared</p>
     <p class="hero-desc">
-        Go on adventures in the Realm of Fiscal Destiny. Build an S&P 500 portfolio with in-game Gold. Equip your character with powerful gear. Compete for glory on the leaderboard — one d20 roll at a time.
+        Face real-world financial scenarios, battle the Debt Dragon, challenge other players to PvP combat, and build a real S&P 500 portfolio with in-game Gold — all free, one d20 roll at a time.
     </p>
     <div class="hero-ctas">
         <a href="pages/register.php" class="btn-primary">⚔ Begin Your Legend</a>
@@ -1015,12 +1124,12 @@ body::before {
     </div>
     <div class="hero-stats">
         <div>
-            <span class="hero-stat-val">13+</span>
+            <span class="hero-stat-val">29+</span>
             <span class="hero-stat-label">Scenarios</span>
         </div>
         <div>
-            <span class="hero-stat-val">500</span>
-            <span class="hero-stat-label">S&P 500 Stocks</span>
+            <span class="hero-stat-val"><?= htmlspecialchars($adventureCountDisplay, ENT_QUOTES, 'UTF-8') ?></span>
+            <span class="hero-stat-label">Adventures Played</span>
         </div>
         <div>
             <span class="hero-stat-val">5</span>
@@ -1039,60 +1148,27 @@ body::before {
     <h2 class="section-title">Your Dashboard, Your Empire</h2>
     <p class="section-desc">Track your adventures, monitor your portfolio, and see how you stack up against other adventurers — all from one command center.</p>
 
-    <!--
-    ╔══════════════════════════════════════════════════════════════╗
-    ║  SCREENSHOT PLACEHOLDER — Dashboard                         ║
-    ║  Replace this div with an <img> tag                         ║
-    ║  Recommended: Full-width screenshot of the dashboard page   ║
-    ║  Showing: player stats, daily brief, mini leaderboard       ║
-    ║  Size: 1280×720px minimum, PNG or WebP                      ║
-    ║  Save to: assets/img/landing/screenshot-dashboard.png       ║
-    ╚══════════════════════════════════════════════════════════════╝
-    -->
     <div class="screenshot-main">
-        <div class="screenshot-placeholder">
-            <span class="ph-icon">🖥</span>
-            <span class="ph-title">Dashboard Screenshot</span>
-            <span class="ph-desc">Replace with a full screenshot of your dashboard page showing the Daily Brief, player stats card, and mini leaderboard</span>
-        </div>
+        <img src="assets/img/landing/screenshot-dashboard.png"
+             alt="LotGD Dashboard — player stats, daily brief, and leaderboard"
+             style="width:100%;height:100%;object-fit:cover;object-position:top;display:block">
     </div>
 
     <div class="screenshot-grid">
-        <!--
-        Screenshot 2: Adventure encounter screen
-        Show a scenario card with choices visible
-        Save to: assets/img/landing/screenshot-adventure.png
-        -->
         <div class="screenshot-sm">
-            <div class="screenshot-placeholder" style="height:100%">
-                <span class="ph-icon">⚔</span>
-                <span class="ph-title">Adventure Screen</span>
-                <span class="ph-desc">A scenario card with choices</span>
-            </div>
+            <img src="assets/img/landing/screenshot-adventure.png"
+                 alt="LotGD Adventure — scenario card with choices and d20 roll"
+                 style="width:100%;height:100%;object-fit:cover;object-position:top;display:block">
         </div>
-        <!--
-        Screenshot 3: Portfolio page
-        Show holdings table, % return vs SPY benchmark
-        Save to: assets/img/landing/screenshot-portfolio.png
-        -->
         <div class="screenshot-sm">
-            <div class="screenshot-placeholder" style="height:100%">
-                <span class="ph-icon">📈</span>
-                <span class="ph-title">Portfolio Page</span>
-                <span class="ph-desc">Holdings and return vs SPY</span>
-            </div>
+            <img src="assets/img/landing/screenshot-portfolio.png"
+                 alt="LotGD Portfolio — S&P 500 holdings and return vs SPY benchmark"
+                 style="width:100%;height:100%;object-fit:cover;object-position:top;display:block">
         </div>
-        <!--
-        Screenshot 4: Leaderboard page
-        Show top players ranked by portfolio return
-        Save to: assets/img/landing/screenshot-leaderboard.png
-        -->
         <div class="screenshot-sm">
-            <div class="screenshot-placeholder" style="height:100%">
-                <span class="ph-icon">👑</span>
-                <span class="ph-title">Leaderboard</span>
-                <span class="ph-desc">Top players ranked by return</span>
-            </div>
+            <img src="assets/img/landing/screenshot-leaderboard.png"
+                 alt="LotGD Leaderboard — top players ranked by portfolio return"
+                 style="width:100%;height:100%;object-fit:cover;object-position:top;display:block">
         </div>
     </div>
 </section>
@@ -1130,6 +1206,16 @@ body::before {
                 <span class="feature-icon">👑</span>
                 <div class="feature-title">Competitive Leaderboard</div>
                 <p class="feature-desc">Ranked by portfolio return. Who's beating the S&P 500? Who's getting crushed? Glory and shame, rendered in percentages.</p>
+            </div>
+            <div class="feature-card">
+                <span class="feature-icon">⚔</span>
+                <div class="feature-title">PvP Combat</div>
+                <p class="feature-desc">Challenge other adventurers to direct combat. Initiative rolls, gear bonuses, up to ten rounds — winner earns XP and bragging rights on the leaderboard.</p>
+            </div>
+            <div class="feature-card">
+                <span class="feature-icon">🐉</span>
+                <div class="feature-title">The Debt Dragon</div>
+                <p class="feature-desc">When you've used all your daily actions, one last challenge awaits. Defeat the Debt Dragon in battle and earn a bonus action to adventure again.</p>
             </div>
             <div class="feature-card">
                 <span class="feature-icon">🍺</span>
@@ -1217,7 +1303,7 @@ body::before {
                 <span class="outcome-pill op-fail">✘ Failure — Lose Gold</span>
                 <span class="outcome-pill op-cfail">💀 Critical Failure — Big loss</span>
             </div>
-            <p>Six scenario categories. Thirteen encounters at launch, with more added regularly. Every session is different.</p>
+            <p>Six scenario categories. 29 unique adventures and growing. Challenge other players to PvP combat — initiative, gear bonuses, and ten rounds of glory. Every session is different.</p>
             <a href="pages/register.php" class="btn-primary" style="margin-top:1rem;display:inline-block">
                 ⚔ Start Adventuring Free
             </a>
@@ -1288,18 +1374,10 @@ body::before {
             </div>
         </div>
 
-        <!--
-        ╔══════════════════════════════════════════════════════════════╗
-        ║  SCREENSHOT PLACEHOLDER — Portfolio Page                    ║
-        ║  Replace with: <img src="assets/img/landing/screenshot-portfolio.png" ...> ║
-        ║  Show: holdings table, % return vs SPY, leaderboard rank    ║
-        ║  Size: 800×600px minimum                                    ║
-        ╚══════════════════════════════════════════════════════════════╝
-        -->
-        <div class="portfolio-screenshot">
-            <span style="font-size:2.5rem;opacity:0.4">📊</span>
-            <span style="font-family:'Cinzel',serif;font-size:0.75rem;color:var(--text-muted)">Portfolio Screenshot</span>
-            <span style="font-size:0.72rem;color:var(--text-dim);max-width:200px;text-align:center;font-family:'Crimson Pro',serif;text-transform:none;letter-spacing:0">Replace with screenshot of portfolio page showing holdings and return vs SPY</span>
+        <div class="portfolio-screenshot" style="padding:0;overflow:hidden">
+            <img src="assets/img/landing/screenshot-portfolio.png"
+                 alt="LotGD Portfolio — S&P 500 holdings and return vs SPY benchmark"
+                 style="width:100%;height:100%;object-fit:cover;object-position:top;display:block">
         </div>
     </div>
 </section>
@@ -1353,13 +1431,29 @@ body::before {
 
 <!-- FOOTER -->
 <footer class="site-footer">
-    <div class="footer-brand">⚔ Legends of the Green Dollar &nbsp;·&nbsp; &copy; 2026</div>
+    <div class="footer-brand">⚔ Legends of the Green Dollar &nbsp;·&nbsp; &copy; <?= date('Y') ?></div>
     <div class="footer-links">
         <a href="pages/login.php">Sign In</a>
         <a href="pages/register.php">Register</a>
-        <a href="https://github.com/JeremyYowell/lotgd" target="_blank">GitHub</a>
+        <a href="pages/privacy.php">Privacy Policy</a>
     </div>
 </footer>
+
+<script>
+function toggleMobileNav(btn) {
+    var links = document.getElementById('nav-links');
+    var open  = links.classList.toggle('nav-open');
+    btn.classList.toggle('is-open', open);
+    btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+}
+function closeMobileNav() {
+    document.getElementById('nav-links').classList.remove('nav-open');
+    var btn = document.getElementById('nav-hamburger');
+    if (btn) { btn.classList.remove('is-open'); btn.setAttribute('aria-expanded','false'); }
+}
+// Close menu on scroll
+window.addEventListener('scroll', closeMobileNav, { passive: true });
+</script>
 
 </body>
 </html>

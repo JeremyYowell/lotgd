@@ -78,6 +78,17 @@ $leaderboard = $db->fetchAll(
      LIMIT 10"
 );
 
+// Onboarding checklist state
+$showWelcomeQuest = !Onboarding::isDismissed($userId, 'onboard_dashboard');
+if ($showWelcomeQuest) {
+    $questAdventured = ($adventureStats['total'] ?? 0) > 0;
+    $questBoughtStock = (bool) $db->fetchValue(
+        "SELECT 1 FROM portfolio_holdings WHERE user_id = ? AND shares > 0 LIMIT 1",
+        [$userId]
+    );
+    $questVisitedStore = Onboarding::isDismissed($userId, 'onboard_store');
+}
+
 // XP progress percentage
 $xpProgress = $user['xp_to_next_level'] > 0
     ? min(100, (int) (($user['xp'] / $user['xp_to_next_level']) * 100))
@@ -130,6 +141,52 @@ ob_start();
 ?>
 
 <?= renderFlash() ?>
+
+<?php if ($showWelcomeQuest): ?>
+<div class="onboard-tip onboard-quest" data-onboard-flag="onboard_dashboard">
+    <span class="onboard-tip-icon">🏰</span>
+    <div class="onboard-tip-body">
+        <div class="onboard-quest-title">Welcome to the Realm, <?= e($user['username']) ?>!</div>
+        <div class="onboard-quest-sub">Your legend begins now. Complete these three deeds to get your bearings:</div>
+        <ul class="onboard-quest-steps">
+            <li class="<?= $questAdventured ? 'done' : '' ?>">
+                <span class="<?= $questAdventured ? 'step-check' : 'step-pending' ?>">
+                    <?= $questAdventured ? '✔' : '○' ?>
+                </span>
+                <?php if ($questAdventured): ?>
+                    First adventure complete
+                <?php else: ?>
+                    <a href="<?= BASE_URL ?>/pages/adventure.php">Go on your first adventure</a>
+                <?php endif; ?>
+            </li>
+            <li class="<?= $questBoughtStock ? 'done' : '' ?>">
+                <span class="<?= $questBoughtStock ? 'step-check' : 'step-pending' ?>">
+                    <?= $questBoughtStock ? '✔' : '○' ?>
+                </span>
+                <?php if ($questBoughtStock): ?>
+                    First stock purchased
+                <?php else: ?>
+                    <a href="<?= BASE_URL ?>/pages/portfolio.php">Buy your first stock</a>
+                <?php endif; ?>
+            </li>
+            <li class="<?= $questVisitedStore ? 'done' : '' ?>">
+                <span class="<?= $questVisitedStore ? 'step-check' : 'step-pending' ?>">
+                    <?= $questVisitedStore ? '✔' : '○' ?>
+                </span>
+                <?php if ($questVisitedStore): ?>
+                    Store visited
+                <?php else: ?>
+                    <a href="<?= BASE_URL ?>/pages/store.php">Visit the Store and gear up</a>
+                <?php endif; ?>
+            </li>
+        </ul>
+        <div class="onboard-quest-gold-note">
+            💰 You start with <strong>500 Gold</strong>. In this realm, 1 Gold = $1,000 in the market.
+        </div>
+    </div>
+    <button class="onboard-tip-dismiss" aria-label="Dismiss">✕</button>
+</div>
+<?php endif; ?>
 
 <?php if ($briefHtml): ?>
 <?= $briefHtml ?>

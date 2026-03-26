@@ -168,6 +168,20 @@ ob_start();
 
 <div class="lb-wrap">
 
+<?php if (!Onboarding::isDismissed($userId, 'onboard_leaderboard')): ?>
+<div class="onboard-tip" data-onboard-flag="onboard_leaderboard">
+    <span class="onboard-tip-icon">🏆</span>
+    <div class="onboard-tip-body">
+        <strong>How the rankings work</strong>
+        The default ranking is <strong>portfolio return %</strong> — how well your investments are performing
+        vs. what you paid. You can also sort by Total XP, Level, Login Streak, and PvP Wins.
+        The Hall of Fame crowns the top player in each category. Keep logging in daily — your login streak
+        is its own leaderboard category.
+    </div>
+    <button class="onboard-tip-dismiss" aria-label="Dismiss">✕</button>
+</div>
+<?php endif; ?>
+
     <!-- PAGE HEADER -->
     <div class="lb-header">
         <div>

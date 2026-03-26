@@ -165,7 +165,7 @@ ob_start();
 
     <p>
         Questions or deletion requests:
-        <a href="mailto:jeremy@lotgd.money" style="color:var(--color-gold)">jeremy@lotgd.money</a>
+        <a href="mailto:admin@lotgd.money" style="color:var(--color-gold)">admin@lotgd.money</a>
     </p>
 
     <p style="margin-top:2.5rem;border-top:1px solid var(--color-border);padding-top:1.5rem">

@@ -10,6 +10,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?= e($pageTitle ?? 'Legends of the Green Dollar') ?> — LotGD</title>
     <meta name="robots" content="<?= IS_DEV ? 'noindex,nofollow' : 'index,follow' ?>">
+    <meta name="csrf-token" content="<?= e(Session::csrfToken()) ?>">
+    <link rel="manifest" href="<?= BASE_URL ?>/manifest.json">
+    <meta name="theme-color" content="#d4a017">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@700&family=Cinzel:wght@400;600&family=Crimson+Pro:ital,wght@0,300;0,400;0,600;1,300;1,400&display=swap" rel="stylesheet">
@@ -102,5 +105,33 @@
 </footer>
 
 <?= $extraScripts ?? '' ?>
+
+<script>
+// Onboarding tip dismiss — shared across all pages
+(function () {
+    var csrfMeta = document.querySelector('meta[name="csrf-token"]');
+    var csrfToken = csrfMeta ? csrfMeta.getAttribute('content') : '';
+    var baseUrl = '<?= BASE_URL ?>';
+
+    document.querySelectorAll('.onboard-tip-dismiss').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            var tip  = this.closest('.onboard-tip');
+            var flag = tip ? tip.dataset.onboardFlag : null;
+            if (!flag) return;
+
+            // Animate out
+            tip.classList.add('onboard-hiding');
+            setTimeout(function () { if (tip.parentNode) tip.parentNode.removeChild(tip); }, 320);
+
+            // Persist dismissal
+            fetch(baseUrl + '/api/dismiss_onboarding.php', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: 'flag=' + encodeURIComponent(flag) + '&csrf_token=' + encodeURIComponent(csrfToken)
+            });
+        });
+    });
+}());
+</script>
 </body>
 </html>

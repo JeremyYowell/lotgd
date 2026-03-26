@@ -1,0 +1,25 @@
+{
+  "name": "Legends of the Green Dollar",
+  "short_name": "LotGD",
+  "description": "A free multiplayer financial RPG. Adventure, invest, equip, and compete.",
+  "start_url": "/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#07090f",
+  "theme_color": "#d4a017",
+  "categories": ["games", "education", "finance"],
+  "icons": [
+    {
+      "src": "/assets/img/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/assets/img/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

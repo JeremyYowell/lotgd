@@ -8,3 +8,9 @@ Options -Indexes
 # Custom error pages
 ErrorDocument 404 /404.php
 ErrorDocument 403 /404.php
+
+# Serve dynamic robots.php as /robots.txt
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    RewriteRule ^robots\.txt$ robots.php [L]
+</IfModule>

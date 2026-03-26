@@ -638,6 +638,107 @@ input::placeholder { color: var(--color-text-dim); }
     .class-grid { grid-template-columns: repeat(2, 1fr); }
 }
 
+/* -----------------------------------------------------------------------
+   ONBOARDING TIPS
+----------------------------------------------------------------------- */
+.onboard-tip {
+    display: flex;
+    gap: 1rem;
+    align-items: flex-start;
+    background: color-mix(in srgb, var(--color-gold) 7%, var(--color-bg-card));
+    border: 1px solid color-mix(in srgb, var(--color-gold) 30%, transparent);
+    border-radius: var(--radius);
+    padding: 1rem 1.25rem;
+    margin-bottom: 1.5rem;
+    transition: opacity 0.3s ease, transform 0.3s ease, max-height 0.3s ease;
+    overflow: hidden;
+}
+.onboard-tip.onboard-hiding {
+    opacity: 0;
+    transform: translateY(-6px);
+    pointer-events: none;
+}
+.onboard-tip-icon {
+    font-size: 1.4rem;
+    flex-shrink: 0;
+    line-height: 1.2;
+}
+.onboard-tip-body {
+    flex: 1;
+    font-size: 0.875rem;
+    color: var(--color-text-muted);
+    line-height: 1.5;
+}
+.onboard-tip-body strong {
+    display: block;
+    color: var(--color-text);
+    font-family: var(--font-heading);
+    font-size: 0.78rem;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    margin-bottom: 0.2rem;
+}
+.onboard-tip-dismiss {
+    flex-shrink: 0;
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: var(--color-text-dim);
+    font-size: 1rem;
+    line-height: 1;
+    padding: 0.1rem 0.25rem;
+    opacity: 0.5;
+    transition: opacity 0.2s;
+    align-self: flex-start;
+}
+.onboard-tip-dismiss:hover { opacity: 1; }
+
+/* Welcome Quest checklist (dashboard) */
+.onboard-quest {
+    border-color: var(--color-border-gold);
+    box-shadow: var(--shadow-gold);
+}
+.onboard-quest-title {
+    font-family: var(--font-heading);
+    font-size: 0.95rem;
+    color: var(--color-gold);
+    margin-bottom: 0.35rem;
+}
+.onboard-quest-sub {
+    font-size: 0.85rem;
+    color: var(--color-text-muted);
+    margin-bottom: 0.9rem;
+}
+.onboard-quest-steps {
+    list-style: none;
+    padding: 0;
+    margin: 0 0 0.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.45rem;
+}
+.onboard-quest-steps li {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.875rem;
+    color: var(--color-text);
+}
+.onboard-quest-steps li.done {
+    color: var(--color-text-dim);
+    text-decoration: line-through;
+}
+.onboard-quest-steps li .step-check   { color: var(--color-green); }
+.onboard-quest-steps li .step-pending { color: var(--color-text-dim); opacity: 0.5; }
+.onboard-quest-steps a { color: var(--color-gold); }
+.onboard-quest-gold-note {
+    font-size: 0.78rem;
+    color: var(--color-text-dim);
+    margin-top: 0.75rem;
+    padding-top: 0.65rem;
+    border-top: 1px solid var(--color-border);
+}
+
 /* Hamburger hidden on desktop */
 @media (min-width: 601px) {
     .nav-hamburger { display: none; }

@@ -720,6 +720,19 @@ ob_start();
 
 <div class="adv-wrap">
 
+<?php if (!Onboarding::isDismissed($userId, 'onboard_adventure')): ?>
+<div class="onboard-tip" data-onboard-flag="onboard_adventure">
+    <span class="onboard-tip-icon">🎲</span>
+    <div class="onboard-tip-body">
+        <strong>How adventures work</strong>
+        Each scenario is a d20 roll vs a hidden difficulty (DC). Your result = d20 + ⌊level÷5⌋ + class bonus.
+        A natural 20 is always a critical success. You have <strong>10 adventures per day</strong> — they reset at midnight.
+        Your class gives <strong>+3</strong> to rolls in its specialty category.
+    </div>
+    <button class="onboard-tip-dismiss" aria-label="Dismiss">✕</button>
+</div>
+<?php endif; ?>
+
     <div class="adv-header">
         <div>
             <h1>⚔ Go Adventuring</h1>
