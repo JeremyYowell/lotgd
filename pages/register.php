@@ -17,10 +17,10 @@ $errors = [];
 
 $classes = [
     'investor'    => ['icon' => '📈', 'name' => 'The Investor',    'desc' => '+3 on Investing adventures'],
-    'debt_slayer' => ['icon' => '🗡️',  'name' => 'Debt Slayer',    'desc' => '+3 on Banking & Shopping adventures'],
-    'saver'       => ['icon' => '🏦', 'name' => 'The Saver',       'desc' => '+3 on Shopping & Daily Life adventures'],
+    'debt_slayer' => ['icon' => '🗡️',  'name' => 'Debt Slayer',    'desc' => '+3 on Banking adventures'],
+    'saver'       => ['icon' => '🏦', 'name' => 'The Saver',       'desc' => '+3 on Shopping adventures'],
     'entrepreneur'=> ['icon' => '🚀', 'name' => 'Entrepreneur',    'desc' => '+3 on Work adventures'],
-    'minimalist'  => ['icon' => '🧘', 'name' => 'The Minimalist',  'desc' => '+3 on Shopping & Daily Life adventures'],
+    'minimalist'  => ['icon' => '🧘', 'name' => 'The Minimalist',  'desc' => '+3 on Daily Life adventures'],
 ];
 
 // =========================================================================

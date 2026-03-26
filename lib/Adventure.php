@@ -10,10 +10,10 @@ class Adventure {
     // Class bonus categories
     private const CLASS_BONUSES = [
         'investor'    => ['investing'],
-        'debt_slayer' => ['banking', 'shopping'],
-        'saver'       => ['daily_life', 'shopping'],
+        'debt_slayer' => ['banking'],
+        'saver'       => ['shopping'],
         'entrepreneur'=> ['work'],
-        'minimalist'  => ['shopping', 'daily_life'],
+        'minimalist'  => ['daily_life'],
     ];
 
     private const CLASS_BONUS_VALUE = 3;
