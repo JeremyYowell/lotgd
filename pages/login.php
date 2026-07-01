@@ -54,8 +54,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 if ($attempts >= MAX_LOGIN_ATTEMPTS) {
                     Session::set($lockoutKey . '_until', time() + (LOGIN_LOCKOUT_MINUTES * 60));
                     $errors[] = 'Too many failed attempts. Your account is locked for ' . LOGIN_LOCKOUT_MINUTES . ' minutes.';
+                    Security::alert('LotGD: Login Lockout', "User '$username' locked after $attempts failed attempts", 'high');
                 } else {
                     $errors[] = 'Invalid username or password. ' . $remaining . ' attempt(s) remaining.';
+                    Security::alert('LotGD: Failed Login', "User '$username' — attempt $attempts of " . MAX_LOGIN_ATTEMPTS);
                 }
             }
         }

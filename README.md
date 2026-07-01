@@ -2,7 +2,9 @@
 
 A multiplayer fantasy RPG where your adventures take place in the financial world. Go on adventures, build an S&P 500 portfolio, equip your character, compete on leaderboards, and challenge fellow adventurers to combat.
 
-**Built with:** PHP 8.1 · MySQL 8 · Vanilla JS · DreamHost shared hosting  
+Use `C:\Users\jerem\dev` as the short local path for development work, scripts, and Python utilities. It junctions to `C:\Users\jerem\OneDrive\Second Brain\Digital`.
+
+**Built with:** PHP 8.1 Â· MySQL 8 Â· Vanilla JS Â· DreamHost shared hosting  
 **Live at:** [lotgd.money](https://lotgd.money)
 
 ---
@@ -25,21 +27,21 @@ A multiplayer fantasy RPG where your adventures take place in the financial worl
 
 ## Features
 
-- **Adventure System** — Face financial scenarios (car dealerships, salary negotiations, market crashes) with RPG-style d20 rolls. Critical success on a natural 20 only. DC values hidden from players. Action costs consumed on choice submission, not scenario display. DB-backed session state eliminates race conditions. 10 actions per day with a live countdown to reset.
-- **Voice Mode** — ElevenLabs TTS narration on the adventure page. Per-player toggle (gold pill switch) persists to account. Auto-plays scenario title/description, then each choice text in sequence. Auto-plays outcome narrative on result screen. Stop button appears during playback. Audio generated via Admin → Audio Manager — one file per API call to avoid server timeouts. Powered by ElevenLabs.
-- **PvP Combat** — Challenge players at your level or higher to turn-based combat. Initiative rolled once per battle and persists for the entire fight. HP scales with level (base 20 + 2 per level). Gear modifies attack, defense, and damage. Up to 10 rounds with flee option. XP rewards for winner, loser, and draw. Full victory/defeat screen with combat log and honor record.
-- **Player Profiles** — Public profile pages showing adventure stats, category win rates, portfolio performance, login streak, equipped gear, and achievement history. Item profile pages showing effect, rarity, and who has it equipped. Profile links throughout leaderboard, tavern, dashboard, and portfolio pages. Challenge button links directly to PvP.
-- **S&P 500 Simulated Portfolio** — Trade any S&P 500 stock using in-game Gold at real previous-close prices. Hourly price updates via Finnhub free tier. SPY used as benchmark. Monthly Gold bonus for beating the index. Top Performers and The Dungeon (worst performers) with profile links.
-- **Leaderboard** — Primary ranking by portfolio % return. Also sortable by XP, level, and login streak. Hall of fame strip for top performers. Class distribution chart.
-- **The Tavern** — Community message board with pinning, moderation, and anti-spam cooldown.
-- **Item Store** — 15 purchasable items across Tool, Armor, Weapon, and Consumable slots. Gear affects adventure rolls and PvP combat stats. Three permanent equipment slots.
-- **Daily Adventurer's Brief** — AI-generated fantasy market recap using Claude Sonnet. Covers S&P 500 movement, top movers, realm activity, PvP battle results, and the current combat champion. Generated once daily via its own cron, cached in the settings table.
-- **Email via Resend.com** — Resend.com API as primary email driver with automatic PHP mail() fallback. Configurable via admin settings.
-- **Admin Panel** — User management, settings editor, adventure scenario manager with full add/edit UI, audio manager for ElevenLabs voice generation, cron health check with filterable logs.
-- **Mobile-Responsive Navigation** — Hamburger menu on mobile (≤600px), collapses on scroll. Portfolio stock search fixed for mobile touch via pointerdown events.
-- **Five Player Classes** — Investor, Debt Slayer, Saver, Entrepreneur, Minimalist — each with +3 roll bonus in specific adventure categories and PvP attack modifiers.
-- **Achievement System** — 14 seeded achievements with XP and Gold rewards, awarded automatically.
-- **Progressive Leveling** — XP curve tuned for level 2 in a good first day of adventuring. Gold reward on level-up (level × 50 Gold). Level-up banner with animation on the adventure result screen.
+- **Adventure System** â€” Face financial scenarios (car dealerships, salary negotiations, market crashes) with RPG-style d20 rolls. Critical success on a natural 20 only. DC values hidden from players. Action costs consumed on choice submission, not scenario display. DB-backed session state eliminates race conditions. 10 actions per day with a live countdown to reset.
+- **Voice Mode** â€” ElevenLabs TTS narration on the adventure page. Per-player toggle (gold pill switch) persists to account. Auto-plays scenario title/description, then each choice text in sequence. Auto-plays outcome narrative on result screen. Stop button appears during playback. Audio generated via Admin â†’ Audio Manager â€” one file per API call to avoid server timeouts. Powered by ElevenLabs.
+- **PvP Combat** â€” Challenge players at your level or higher to turn-based combat. Initiative rolled once per battle and persists for the entire fight. HP scales with level (base 20 + 2 per level). Gear modifies attack, defense, and damage. Up to 10 rounds with flee option. XP rewards for winner, loser, and draw. Full victory/defeat screen with combat log and honor record.
+- **Player Profiles** â€” Public profile pages showing adventure stats, category win rates, portfolio performance, login streak, equipped gear, and achievement history. Item profile pages showing effect, rarity, and who has it equipped. Profile links throughout leaderboard, tavern, dashboard, and portfolio pages. Challenge button links directly to PvP.
+- **S&P 500 Simulated Portfolio** â€” Trade any S&P 500 stock using in-game Gold at real previous-close prices. Hourly price updates via Finnhub free tier. SPY used as benchmark. Monthly Gold bonus for beating the index. Top Performers and The Dungeon (worst performers) with profile links.
+- **Leaderboard** â€” Primary ranking by portfolio % return. Also sortable by XP, level, and login streak. Hall of fame strip for top performers. Class distribution chart.
+- **The Tavern** â€” Community message board with pinning, moderation, and anti-spam cooldown.
+- **Item Store** â€” 15 purchasable items across Tool, Armor, Weapon, and Consumable slots. Gear affects adventure rolls and PvP combat stats. Three permanent equipment slots.
+- **Daily Adventurer's Brief** â€” AI-generated fantasy market recap using Claude Sonnet. Covers S&P 500 movement, top movers, realm activity, PvP battle results, and the current combat champion. Generated once daily via its own cron, cached in the settings table.
+- **Email via Resend.com** â€” Resend.com API as primary email driver with automatic PHP mail() fallback. Configurable via admin settings.
+- **Admin Panel** â€” User management, settings editor, adventure scenario manager with full add/edit UI, audio manager for ElevenLabs voice generation, cron health check with filterable logs.
+- **Mobile-Responsive Navigation** â€” Hamburger menu on mobile (â‰¤600px), collapses on scroll. Portfolio stock search fixed for mobile touch via pointerdown events.
+- **Five Player Classes** â€” Investor, Debt Slayer, Saver, Entrepreneur, Minimalist â€” each with +3 roll bonus in specific adventure categories and PvP attack modifiers.
+- **Achievement System** â€” 14 seeded achievements with XP and Gold rewards, awarded automatically.
+- **Progressive Leveling** â€” XP curve tuned for level 2 in a good first day of adventuring. Gold reward on level-up (level Ã— 50 Gold). Level-up banner with animation on the adventure result screen.
 
 ---
 
@@ -49,9 +51,9 @@ A multiplayer fantasy RPG where your adventures take place in the financial worl
 - MySQL 8.0+
 - Apache with mod_rewrite and `.htaccess` support
 - [Finnhub](https://finnhub.io) free API key (stock prices)
-- [Resend.com](https://resend.com) free account (email — optional, falls back to PHP mail())
-- Anthropic API key (Daily Brief — optional, ~$0.04/month)
-- [ElevenLabs](https://elevenlabs.io) API key (voice mode — optional, free tier = 10,000 chars/month)
+- [Resend.com](https://resend.com) free account (email â€” optional, falls back to PHP mail())
+- Anthropic API key (Daily Brief â€” optional, ~$0.04/month)
+- [ElevenLabs](https://elevenlabs.io) API key (voice mode â€” optional, free tier = 10,000 chars/month)
 - A hosted email address on your domain
 - SSH access for cron jobs
 
@@ -67,7 +69,7 @@ cd lotgd
 cp config/config.example.php config/config.php
 ```
 
-Edit `config/config.php` — fill in database credentials, base URL, timezone, and API keys.
+Edit `config/config.php` â€” fill in database credentials, base URL, timezone, and API keys.
 
 ### 2. Create required directories
 
@@ -106,7 +108,7 @@ mysql -u USER -p lotgd_dev < sql/pvp_initiative_migration.sql
 mysql -u USER -p lotgd_dev < sql/voice_mode.sql
 ```
 
-> **Note:** Foreign key constraint names must be globally unique in MySQL. If you see error #1826, drop any partially created PvP tables and re-run `pvp_schema.sql`. The `voice_mode.sql` `ALTER TABLE` statement does not use `IF NOT EXISTS` — only run it once.
+> **Note:** Foreign key constraint names must be globally unique in MySQL. If you see error #1826, drop any partially created PvP tables and re-run `pvp_schema.sql`. The `voice_mode.sql` `ALTER TABLE` statement does not use `IF NOT EXISTS` â€” only run it once.
 
 ### Grant yourself admin access
 
@@ -133,7 +135,7 @@ UPDATE settings SET setting_value = 're_your_key' WHERE setting_key = 'resend_ap
 -- Optional: Daily Brief
 UPDATE settings SET setting_value = 'sk-ant-your_key' WHERE setting_key = 'claude_api_key';
 
--- Optional: Voice Mode (also configurable via Admin → Audio Manager)
+-- Optional: Voice Mode (also configurable via Admin â†’ Audio Manager)
 UPDATE settings SET setting_value = 'your_elevenlabs_key' WHERE setting_key = 'elevenlabs_api_key';
 ```
 
@@ -160,10 +162,10 @@ UPDATE settings SET setting_value = 'your_elevenlabs_key' WHERE setting_key = 'e
 |---|---|---|
 | Hourly price update (weekdays) | `0 * * * 1-5` | `php /path/cron/price_update.php` |
 | Daily Brief (weekdays) | `0 9 * * 1-5` | `php /path/cron/generate_brief.php` |
-| S&P 500 update — January | `0 7 2 1 *` | `php /path/cron/sp500_update.php` |
-| S&P 500 update — April | `0 7 1 4 *` | `php /path/cron/sp500_update.php` |
-| S&P 500 update — July | `0 7 1 7 *` | `php /path/cron/sp500_update.php` |
-| S&P 500 update — October | `0 7 1 10 *` | `php /path/cron/sp500_update.php` |
+| S&P 500 update â€” January | `0 7 2 1 *` | `php /path/cron/sp500_update.php` |
+| S&P 500 update â€” April | `0 7 1 4 *` | `php /path/cron/sp500_update.php` |
+| S&P 500 update â€” July | `0 7 1 7 *` | `php /path/cron/sp500_update.php` |
+| S&P 500 update â€” October | `0 7 1 10 *` | `php /path/cron/sp500_update.php` |
 
 > Use the full PHP path on DreamHost: `/usr/local/php81/bin/php`  
 > Append `>> /path/logs/cron_brief.log 2>&1` to each cron command to capture output.
@@ -186,88 +188,88 @@ UPDATE settings SET setting_value = 'your_elevenlabs_key' WHERE setting_key = 'e
 
 ```
 lotgd/
-├── admin/
-│   ├── index.php               Admin dashboard
-│   ├── users.php               User management (ban, confirm, delete)
-│   ├── settings.php            In-browser settings editor (API keys masked)
-│   ├── adventures.php          Scenario manager — full add/edit/delete UI
-│   ├── audio.php               ElevenLabs audio manager — generate MP3s per scenario
-│   └── cron.php                Cron health + filterable log windows
-├── api/
-│   ├── stock_search.php        JSON endpoint for portfolio live stock search
-│   └── voice_mode.php          Toggle voice mode preference for current user
-├── assets/
-│   ├── audio/adventures/       Generated MP3 files (gitignored, created on server)
-│   └── css/
-│       ├── main.css            Global styles, design system, hamburger nav
-│       ├── dashboard.css
-│       ├── adventure.css       Adventure page + level-up banner animations
-│       ├── leaderboard.css
-│       ├── tavern.css
-│       ├── portfolio.css
-│       ├── store.css
-│       ├── brief.css           Daily Brief card styles
-│       ├── profile.css         Player profile and item profile pages
-│       ├── pvp.css             PvP combat page + HP meters + result screen
-│       ├── voice_toggle.css    Voice mode pill toggle + stop button
-│       └── admin.css
-├── config/
-│   ├── config.example.php      ← commit this
-│   └── config.php              ← DO NOT commit (.gitignore'd)
-├── cron/
-│   ├── price_update.php        Hourly prices + snapshots + leaderboard
-│   ├── sp500_update.php        Quarterly S&P 500 constituent scraper
-│   └── generate_brief.php      Daily AI brief generator (separate cron)
-├── lib/
-│   ├── Database.php            PDO singleton with query helpers
-│   ├── Session.php             Auth, CSRF protection, flash messages
-│   ├── User.php                User model, XP/leveling, Gold rewards, HP
-│   ├── Portfolio.php           Portfolio trading, snapshots, leaderboard
-│   ├── Adventure.php           d20 roll engine, scenario selection
-│   ├── Store.php               Item store, inventory, effect calculation
-│   ├── DailyBrief.php          Claude API call, market+PvP data, HTML render
-│   ├── Mailer.php              Email via Resend.com API or PHP mail()
-│   └── Pvp.php                 PvP combat engine, initiative, HP, XP
-├── pages/
-│   ├── login.php
-│   ├── register.php
-│   ├── logout.php
-│   ├── dashboard.php
-│   ├── adventure.php           DB-backed session, countdown, voice mode
-│   ├── leaderboard.php         Portfolio return primary sort
-│   ├── tavern.php
-│   ├── portfolio.php           Top performers + The Dungeon + profile links
-│   ├── store.php
-│   ├── pvp.php                 PvP combat (idle / fighting / result states)
-│   ├── profile.php             Public player profile + challenge button
-│   ├── item.php                Public item profile with rarity + who has it
-│   ├── confirm_email.php
-│   └── confirm_required.php
-├── sql/
-│   ├── schema.sql
-│   ├── portfolio_schema.sql
-│   ├── email_confirm_schema.sql
-│   ├── adventure_schema.sql        13 seeded scenarios across 6 categories
-│   ├── store_schema.sql            15 seeded items
-│   ├── daily_brief_settings.sql
-│   ├── adventure_sessions.sql      DB-backed adventure state
-│   ├── pvp_schema.sql              PvP sessions, log, and stats tables
-│   ├── pvp_initiative_migration.sql  Adds initiative_order column
-│   ├── voice_mode.sql              adventure_audio table + users.voice_mode column
-│   ├── email_driver_settings.sql   Resend.com driver settings
-│   └── xp_curve_migration.sql      Updates existing users to new XP curve
-├── templates/
-│   ├── layout.php              Master HTML with hamburger nav + Store link
-│   └── maintenance.php
-├── landing.php                 Marketing landing page (shown to guests)
-├── bootstrap.php               App entry — redirects to /setup/ if not installed
-├── index.php                   Guests → landing page, logged in → dashboard
-├── 404.php                     Auto-redirect with countdown
-├── .gitignore
-├── .htaccess                   HTTPS redirect, security rules
-├── LICENSE
-├── README.md
-└── CONTRIBUTING.md
+â”œâ”€â”€ admin/
+â”‚   â”œâ”€â”€ index.php               Admin dashboard
+â”‚   â”œâ”€â”€ users.php               User management (ban, confirm, delete)
+â”‚   â”œâ”€â”€ settings.php            In-browser settings editor (API keys masked)
+â”‚   â”œâ”€â”€ adventures.php          Scenario manager â€” full add/edit/delete UI
+â”‚   â”œâ”€â”€ audio.php               ElevenLabs audio manager â€” generate MP3s per scenario
+â”‚   â””â”€â”€ cron.php                Cron health + filterable log windows
+â”œâ”€â”€ api/
+â”‚   â”œâ”€â”€ stock_search.php        JSON endpoint for portfolio live stock search
+â”‚   â””â”€â”€ voice_mode.php          Toggle voice mode preference for current user
+â”œâ”€â”€ assets/
+â”‚   â”œâ”€â”€ audio/adventures/       Generated MP3 files (gitignored, created on server)
+â”‚   â””â”€â”€ css/
+â”‚       â”œâ”€â”€ main.css            Global styles, design system, hamburger nav
+â”‚       â”œâ”€â”€ dashboard.css
+â”‚       â”œâ”€â”€ adventure.css       Adventure page + level-up banner animations
+â”‚       â”œâ”€â”€ leaderboard.css
+â”‚       â”œâ”€â”€ tavern.css
+â”‚       â”œâ”€â”€ portfolio.css
+â”‚       â”œâ”€â”€ store.css
+â”‚       â”œâ”€â”€ brief.css           Daily Brief card styles
+â”‚       â”œâ”€â”€ profile.css         Player profile and item profile pages
+â”‚       â”œâ”€â”€ pvp.css             PvP combat page + HP meters + result screen
+â”‚       â”œâ”€â”€ voice_toggle.css    Voice mode pill toggle + stop button
+â”‚       â””â”€â”€ admin.css
+â”œâ”€â”€ config/
+â”‚   â”œâ”€â”€ config.example.php      â† commit this
+â”‚   â””â”€â”€ config.php              â† DO NOT commit (.gitignore'd)
+â”œâ”€â”€ cron/
+â”‚   â”œâ”€â”€ price_update.php        Hourly prices + snapshots + leaderboard
+â”‚   â”œâ”€â”€ sp500_update.php        Quarterly S&P 500 constituent scraper
+â”‚   â””â”€â”€ generate_brief.php      Daily AI brief generator (separate cron)
+â”œâ”€â”€ lib/
+â”‚   â”œâ”€â”€ Database.php            PDO singleton with query helpers
+â”‚   â”œâ”€â”€ Session.php             Auth, CSRF protection, flash messages
+â”‚   â”œâ”€â”€ User.php                User model, XP/leveling, Gold rewards, HP
+â”‚   â”œâ”€â”€ Portfolio.php           Portfolio trading, snapshots, leaderboard
+â”‚   â”œâ”€â”€ Adventure.php           d20 roll engine, scenario selection
+â”‚   â”œâ”€â”€ Store.php               Item store, inventory, effect calculation
+â”‚   â”œâ”€â”€ DailyBrief.php          Claude API call, market+PvP data, HTML render
+â”‚   â”œâ”€â”€ Mailer.php              Email via Resend.com API or PHP mail()
+â”‚   â””â”€â”€ Pvp.php                 PvP combat engine, initiative, HP, XP
+â”œâ”€â”€ pages/
+â”‚   â”œâ”€â”€ login.php
+â”‚   â”œâ”€â”€ register.php
+â”‚   â”œâ”€â”€ logout.php
+â”‚   â”œâ”€â”€ dashboard.php
+â”‚   â”œâ”€â”€ adventure.php           DB-backed session, countdown, voice mode
+â”‚   â”œâ”€â”€ leaderboard.php         Portfolio return primary sort
+â”‚   â”œâ”€â”€ tavern.php
+â”‚   â”œâ”€â”€ portfolio.php           Top performers + The Dungeon + profile links
+â”‚   â”œâ”€â”€ store.php
+â”‚   â”œâ”€â”€ pvp.php                 PvP combat (idle / fighting / result states)
+â”‚   â”œâ”€â”€ profile.php             Public player profile + challenge button
+â”‚   â”œâ”€â”€ item.php                Public item profile with rarity + who has it
+â”‚   â”œâ”€â”€ confirm_email.php
+â”‚   â””â”€â”€ confirm_required.php
+â”œâ”€â”€ sql/
+â”‚   â”œâ”€â”€ schema.sql
+â”‚   â”œâ”€â”€ portfolio_schema.sql
+â”‚   â”œâ”€â”€ email_confirm_schema.sql
+â”‚   â”œâ”€â”€ adventure_schema.sql        13 seeded scenarios across 6 categories
+â”‚   â”œâ”€â”€ store_schema.sql            15 seeded items
+â”‚   â”œâ”€â”€ daily_brief_settings.sql
+â”‚   â”œâ”€â”€ adventure_sessions.sql      DB-backed adventure state
+â”‚   â”œâ”€â”€ pvp_schema.sql              PvP sessions, log, and stats tables
+â”‚   â”œâ”€â”€ pvp_initiative_migration.sql  Adds initiative_order column
+â”‚   â”œâ”€â”€ voice_mode.sql              adventure_audio table + users.voice_mode column
+â”‚   â”œâ”€â”€ email_driver_settings.sql   Resend.com driver settings
+â”‚   â””â”€â”€ xp_curve_migration.sql      Updates existing users to new XP curve
+â”œâ”€â”€ templates/
+â”‚   â”œâ”€â”€ layout.php              Master HTML with hamburger nav + Store link
+â”‚   â””â”€â”€ maintenance.php
+â”œâ”€â”€ landing.php                 Marketing landing page (shown to guests)
+â”œâ”€â”€ bootstrap.php               App entry â€” redirects to /setup/ if not installed
+â”œâ”€â”€ index.php                   Guests â†’ landing page, logged in â†’ dashboard
+â”œâ”€â”€ 404.php                     Auto-redirect with countdown
+â”œâ”€â”€ .gitignore
+â”œâ”€â”€ .htaccess                   HTTPS redirect, security rules
+â”œâ”€â”€ LICENSE
+â”œâ”€â”€ README.md
+â””â”€â”€ CONTRIBUTING.md
 ```
 
 ---
@@ -281,9 +283,9 @@ Every page starts with `require_once bootstrap.php` which:
 1. Redirects to `/setup/` if `config/config.php` doesn't exist yet
 2. Loads `config/config.php` constants
 3. Registers PSR-0 autoloader for `lib/` classes
-4. `Session::start()` — secure cookie settings, CSRF token
-5. `$db = Database::getInstance()` — PDO singleton
-6. Session expiry detection — expired sessions redirect cleanly to login
+4. `Session::start()` â€” secure cookie settings, CSRF token
+5. `$db = Database::getInstance()` â€” PDO singleton
+6. Session expiry detection â€” expired sessions redirect cleanly to login
 7. Maintenance mode gate
 8. Email confirmation gate
 
@@ -322,10 +324,10 @@ level_modifier = floor(level / 5)        // +1 per 5 levels
 class_modifier = +3 if scenario category matches class bonus
 
 Outcomes:
-  natural 20 (raw die)  → Critical Success  — 150% XP + Gold
-  final_roll >= DC       → Success           — 100% XP + Gold
-  final_roll < DC        → Failure           — 0 XP, -25% Gold
-  final_roll < DC - 4    → Critical Failure  — 0 XP, -50% Gold
+  natural 20 (raw die)  â†’ Critical Success  â€” 150% XP + Gold
+  final_roll >= DC       â†’ Success           â€” 100% XP + Gold
+  final_roll < DC        â†’ Failure           â€” 0 XP, -25% Gold
+  final_roll < DC - 4    â†’ Critical Failure  â€” 0 XP, -50% Gold
 ```
 
 DC values are hidden from players. Critical success requires a natural 20 on the d20.
@@ -344,14 +346,14 @@ Adventure narration powered by ElevenLabs TTS. Audio files are pre-generated by 
 
 ```
 Adventure{id}TitleDesc.mp3
-Adventure{id}Choice{n}Text.mp3       — "First choice. {text}"
-Adventure{id}Choice{n}Success.mp3    — "Success. {narrative}"
-Adventure{id}Choice{n}Failure.mp3    — "Failure. {narrative}"
+Adventure{id}Choice{n}Text.mp3       â€” "First choice. {text}"
+Adventure{id}Choice{n}Success.mp3    â€” "Success. {narrative}"
+Adventure{id}Choice{n}Failure.mp3    â€” "Failure. {narrative}"
 Adventure{id}Choice{n}CritSuccess.mp3
 Adventure{id}Choice{n}CritFailure.mp3
 ```
 
-Generate files via Admin → Audio Manager. Each scenario makes one API call per file (16 calls for a 3-choice scenario). Free tier covers ~4 full scenarios per month (10,000 characters).
+Generate files via Admin â†’ Audio Manager. Each scenario makes one API call per file (16 calls for a 3-choice scenario). Free tier covers ~4 full scenarios per month (10,000 characters).
 
 ### Leveling System
 
@@ -366,24 +368,24 @@ Level 10: ~15,773 XP (~24 days)
 HP per level: 20 + (level - 1) * 2
   Level 1: 20 HP   Level 5: 28 HP   Level 10: 38 HP   Level 50: 118 HP
 
-Gold reward on level-up: level × 50 Gold
+Gold reward on level-up: level Ã— 50 Gold
 ```
 
 ### PvP Combat System
 
 ```
-Initiative: d20 + floor(level/5) — rolled ONCE at fight start, persists all rounds
+Initiative: d20 + floor(level/5) â€” rolled ONCE at fight start, persists all rounds
 Attack:     d20 + floor(level/5) + weapon_bonus vs defender d20 + floor(level/5) + armor_bonus
 Damage:     rand(3, 8) + weapon_effect_value
 Flee DC:    12 (roll d20 + floor(level/5) to escape)
 Max rounds: 10 (draw if neither fighter falls)
 
 Gear effects in PvP:
-  Weapon → +2 attack modifier + damage bonus
-  Armor  → +2 defense modifier + HP bonus (based on failure_reduction value)
+  Weapon â†’ +2 attack modifier + damage bonus
+  Armor  â†’ +2 defense modifier + HP bonus (based on failure_reduction value)
 
 XP rewards:
-  Win:  50 XP + (level_difference × 10) bonus XP
+  Win:  50 XP + (level_difference Ã— 10) bonus XP
   Draw: 15 XP each
   Loss: 5 XP
   Flee: 0 XP
@@ -403,7 +405,7 @@ Rules: challengers may only target players at their level or higher. One challen
 
 ### Item Store
 
-Three permanent equipment slots (Tool, Armor, Weapon). Buying replaces and destroys the current item — no refund. Consumables stack to 5 and replenish daily.
+Three permanent equipment slots (Tool, Armor, Weapon). Buying replaces and destroys the current item â€” no refund. Consumables stack to 5 and replenish daily.
 
 | Effect Type | Description |
 |---|---|
@@ -416,7 +418,7 @@ Three permanent equipment slots (Tool, Armor, Weapon). Buying replaces and destr
 
 ### Email Delivery
 
-Two drivers configurable via Admin → Settings:
+Two drivers configurable via Admin â†’ Settings:
 
 | Setting | Value | Behavior |
 |---|---|---|
@@ -429,23 +431,23 @@ If Resend fails, the system automatically falls back to PHP mail().
 
 ## Settings Reference
 
-All editable via Admin → Settings:
+All editable via Admin â†’ Settings:
 
 | Key | Default | Description |
 |---|---|---|
 | `daily_action_limit` | `10` | Adventures per player per day |
 | `gold_to_usd_rate` | `1000` | 1 Gold = this many USD |
 | `portfolio_monthly_bonus` | `100` | Gold for beating SPY monthly |
-| `finnhub_api_key` | — | Finnhub free tier key (masked) |
-| `claude_api_key` | — | Anthropic API key for Daily Brief (masked) |
-| `email_from_address` | — | System email from address |
+| `finnhub_api_key` | â€” | Finnhub free tier key (masked) |
+| `claude_api_key` | â€” | Anthropic API key for Daily Brief (masked) |
+| `email_from_address` | â€” | System email from address |
 | `email_driver` | `php` | `php` or `resend` |
-| `resend_api_key` | — | Resend.com API key (masked) |
-| `elevenlabs_api_key` | — | ElevenLabs API key for voice mode (masked) |
+| `resend_api_key` | â€” | Resend.com API key (masked) |
+| `elevenlabs_api_key` | â€” | ElevenLabs API key for voice mode (masked) |
 | `elevenlabs_voice_id` | `RILOU7YmBhvwJGDGjNmP` | ElevenLabs voice ID |
 | `elevenlabs_model_id` | `eleven_multilingual_v2` | ElevenLabs TTS model |
-| `elevenlabs_stability` | `0.5` | Voice stability (0–1) |
-| `elevenlabs_similarity_boost` | `0.75` | Voice similarity boost (0–1) |
+| `elevenlabs_stability` | `0.5` | Voice stability (0â€“1) |
+| `elevenlabs_similarity_boost` | `0.75` | Voice similarity boost (0â€“1) |
 | `email_confirm_xp_reward` | `10` | XP for confirming email |
 | `email_confirmation_enabled` | `1` | Require email confirmation to play |
 | `registration_open` | `1` | Allow new registrations |
@@ -461,14 +463,14 @@ All editable via Admin → Settings:
 
 ## Adventure Scenarios
 
-Add and edit scenarios via Admin → Adventure Manager. Each scenario needs:
+Add and edit scenarios via Admin â†’ Adventure Manager. Each scenario needs:
 
 - At least 2 choices
 - All four narrative fields per choice (success, failure, crit success, crit failure)
-- A difficulty (DC) between 8 and 18 — DC values are hidden from players
+- A difficulty (DC) between 8 and 18 â€” DC values are hidden from players
 - Min/max level range
 
-DC values below 8 are not recommended — even a roll of 1 should carry meaningful failure risk. After editing a scenario's text, regenerate its audio via Admin → Audio Manager.
+DC values below 8 are not recommended â€” even a roll of 1 should carry meaningful failure risk. After editing a scenario's text, regenerate its audio via Admin â†’ Audio Manager.
 
 ---
 
@@ -480,4 +482,4 @@ See [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## License
 
-MIT — see [LICENSE](LICENSE).
+MIT â€” see [LICENSE](LICENSE).

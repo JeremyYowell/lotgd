@@ -1,6 +1,6 @@
 # Contributing to Legends of the Green Dollar
 
-Thanks for your interest in contributing. This is a personal finance RPG — contributions that improve the game mechanics, add adventure scenarios, improve accessibility, or fix bugs are all welcome.
+Thanks for your interest in contributing. This is a personal finance RPG â€” contributions that improve the game mechanics, add adventure scenarios, improve accessibility, or fix bugs are all welcome.
 
 ## Getting Started
 
@@ -14,17 +14,17 @@ Thanks for your interest in contributing. This is a personal finance RPG — con
 ## Code Style
 
 - PHP files use 4-space indentation
-- Class files live in `lib/` and are autoloaded by name (e.g. `Portfolio` → `lib/Portfolio.php`)
-- All DB queries use parameterized statements via the `Database` helper — no raw string interpolation into SQL
+- Class files live in `lib/` and are autoloaded by name (e.g. `Portfolio` â†’ `lib/Portfolio.php`)
+- All DB queries use parameterized statements via the `Database` helper â€” no raw string interpolation into SQL
 - Output is always escaped with `e()` before rendering in HTML
-- New pages follow the pattern: `require_once bootstrap.php` → data fetching → `ob_start()` → HTML → `$pageContent = ob_get_clean()` → `require layout.php`
+- New pages follow the pattern: `require_once bootstrap.php` â†’ data fetching â†’ `ob_start()` â†’ HTML â†’ `$pageContent = ob_get_clean()` â†’ `require layout.php`
 
 ## Adding Adventure Scenarios
 
 The easiest contribution is new adventure scenarios. Add them to `sql/adventure_schema.sql` following the existing pattern. Good scenarios:
 
 - Are grounded in real personal finance situations people actually face
-- Have 2–3 meaningful choices with genuinely different risk/reward profiles
+- Have 2â€“3 meaningful choices with genuinely different risk/reward profiles
 - Give each choice a `hint_text` that hints at the approach without giving away the outcome
 - Have all four narrative fields written with some personality and flavor
 - Set difficulty between 5 (trivial) and 18 (legendary)
