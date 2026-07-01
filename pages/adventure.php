@@ -789,7 +789,7 @@ ob_start();
 
                     <?php if ($dragonAvailable): ?>
                     <div class="dragon-challenge-card">
-                        <div class="dragon-icon">🐉</div>
+                        <img class="dragon-card-img" src="<?= BASE_URL ?>/assets/img/dragon/debt-dragon-lockout.jpg" alt="The Debt Dragon" loading="lazy">
                         <h3 class="dragon-title">The Debt Dragon Stirs</h3>
                         <p class="dragon-desc">
                             Deep in the dungeon below the tavern, something ancient stirs. The Debt Dragon has awoken —
@@ -1214,6 +1214,8 @@ ob_start();
         <h2 class="encounter-title" style="color:#fca5a5">The Debt Dragon</h2>
 
         <p class="encounter-flavor">"Some debts are not merely financial. They are monsters."</p>
+
+        <img class="dragon-battle-img" src="<?= BASE_URL ?>/assets/img/dragon/debt-dragon-battle.jpg" alt="The Debt Dragon" loading="lazy">
 
         <div class="dragon-battle-preview">
             <div class="battle-preview-side">

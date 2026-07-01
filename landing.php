@@ -13,7 +13,7 @@ $adventureCountDisplay = $adventureCount >= 1000
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Legends of the Green Dollar — The Financial RPG</title>
 <meta name="description" content="A free multiplayer RPG with old-school throwbacks, real-world financial scenarios, PvP, quests, and items. Climb to the leaderboard, slay a dragon, defeat other adventurers, and achieve the highest portfolio returns!">
-<meta name="robots" content="<?= IS_DEV ? 'noindex,nofollow' : 'index,follow' ?>">
+<meta name="robots" content="index,follow">
 <link rel="canonical" href="https://lotgd.money/">
 
 <!-- Open Graph -->
@@ -455,6 +455,17 @@ body::before {
     font-size: 2rem;
     margin-bottom: 1rem;
     display: block;
+}
+
+.feature-icon-img {
+    width: 72px;
+    height: 72px;
+    object-fit: cover;
+    border-radius: 10px;
+    margin-bottom: 1rem;
+    display: block;
+    border: 1px solid #7f1d1d;
+    box-shadow: 0 0 14px rgba(239,68,68,0.25);
 }
 
 .feature-title {
@@ -1213,7 +1224,7 @@ body::before {
                 <p class="feature-desc">Challenge other adventurers to direct combat. Initiative rolls, gear bonuses, up to ten rounds — winner earns XP and bragging rights on the leaderboard.</p>
             </div>
             <div class="feature-card">
-                <span class="feature-icon">🐉</span>
+                <img class="feature-icon-img" src="assets/img/dragon/debt-dragon-feature.jpg" alt="The Debt Dragon" loading="lazy">
                 <div class="feature-title">The Debt Dragon</div>
                 <p class="feature-desc">When you've used all your daily actions, one last challenge awaits. Defeat the Debt Dragon in battle and earn a bonus action to adventure again.</p>
             </div>

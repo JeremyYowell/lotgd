@@ -561,6 +561,30 @@
     filter: drop-shadow(0 0 12px rgba(239,68,68,0.5));
 }
 
+.dragon-card-img {
+    width: 120px;
+    height: 120px;
+    object-fit: cover;
+    border-radius: var(--radius-lg);
+    margin: 0 auto 0.75rem;
+    display: block;
+    border: 1px solid #7f1d1d;
+    box-shadow: 0 0 16px rgba(239,68,68,0.3);
+}
+
+.dragon-battle-img {
+    display: block;
+    width: 100%;
+    max-width: 260px;
+    aspect-ratio: 2 / 3;
+    object-fit: cover;
+    object-position: top;
+    margin: 0 auto 1.25rem;
+    border-radius: var(--radius-lg);
+    border: 1px solid #7f1d1d;
+    box-shadow: 0 0 24px rgba(239,68,68,0.25);
+}
+
 .dragon-title {
     font-family: var(--font-heading);
     font-size: 1.1rem;
