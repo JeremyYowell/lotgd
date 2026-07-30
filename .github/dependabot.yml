@@ -1,0 +1,10 @@
+version: 2
+updates:
+  # No Composer manifest in this repo (plain PHP, no package manager) — nothing for
+  # Dependabot to track at the app-dependency level. github-actions is here in case
+  # CI workflows get added later; remove this file's purpose note if Composer is
+  # ever introduced (add a "composer" ecosystem block at that point).
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "monthly"
