@@ -15,8 +15,8 @@ class DailyBrief {
     private string   $apiKey;
     private string   $finnhubKey;
 
-    private const MODEL      = 'claude-sonnet-4-20250514';
-    private const MAX_TOKENS = 600;
+    private const MODEL      = 'claude-sonnet-5-5';
+    private const MAX_TOKENS = 1500;
 
     private const SYSTEM = <<<PROMPT
 You are the herald of the Realm of Fiscal Destiny. Each morning you deliver
