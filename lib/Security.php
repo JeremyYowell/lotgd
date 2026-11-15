@@ -1,14 +1,8 @@
 <?php
 /**
- * Security alerting — fire-and-forget.
- * Sends an ntfy.sh push notification AND ships an event to the central log.
- * Never throws; silently no-ops if constants are not configured.
- *
- * Required constants (add to config/config.php):
- *   NTFY_TOPIC          — ntfy.sh topic (or self-hosted topic after migration)
- *   NTFY_URL            — base URL, default https://ntfy.sh
- *   LOG_INGEST_TOKEN    — plaintext token for space-monkey.org/log
- *   APP_SLUG            — short app name label for log events
+ * Security helpers. Security::alert() sends fire-and-forget events to obs
+ * (helpers at the bottom of this file; needs OBS_URL + OBS_TOKEN in config/config.php).
+ * Never throws.
  */
 
 class Security {
@@ -130,48 +124,60 @@ class Security {
     }
 
     public static function alert(string $title, string $message, string $priority = 'default'): void {
-        $ip = self::clientIp() ?: 'unknown';
-        $full_message = "$message | IP: $ip";
+        // Security events go to obs (see helpers below). 'high' priority = phone alert.
+        obs_security_event('lotgd', $title, ['detail' => $message],
+            in_array($priority, ['high', 'urgent', 'max'], true) ? 'error' : 'notice', self::clientIp());
+    }
+}
 
-        // ntfy.sh push
-        if (defined('NTFY_TOPIC') && NTFY_TOPIC) {
-            $base = defined('NTFY_URL') ? rtrim(NTFY_URL, '/') : 'https://ntfy.sh';
-            @file_get_contents($base . '/' . NTFY_TOPIC, false, stream_context_create([
-                'http' => [
-                    'method'        => 'POST',
-                    'header'        => "Title: $title\r\nPriority: $priority\r\nTags: security",
-                    'content'       => $full_message,
-                    'timeout'       => 3,
-                    'ignore_errors' => true,
-                ]
-            ]));
+// ── Security events → obs (n8n workflow 20; Digital/AI-Agents/OBSERVABILITY_PLAN.md) ──
+// Replaced the per-app ntfy topic + space-monkey.org/log ingest on 2026-11-15.
+// Privacy: raw IPs, usernames and emails never leave this server. IPs are cut to their
+// network (/24 or /48) and identities are masked (j***@gmail.com).
+// level 'notice' = weekly digest only; 'error' = also pushes the n8n ntfy topic, at most
+// once per 6 hours per kind of event. Config: OBS_URL + OBS_TOKEN (constants or env). Never throws.
+if (!function_exists('obs_security_event')) {
+    function obs_mask_ip(string $ip): string {
+        $bin = @inet_pton($ip);
+        if ($bin === false) return 'unknown';
+        if (strlen($bin) === 4) return inet_ntop(substr($bin, 0, 3) . "\0") . '/24';
+        return inet_ntop(substr($bin, 0, 6) . str_repeat("\0", 10)) . '/48';
+    }
+    function obs_mask_id(string $s): string {
+        $s = trim($s);
+        if ($s === '') return '(blank)';
+        if (strpos($s, '@') !== false) {
+            [$u, $d] = explode('@', $s, 2);
+            return substr($u, 0, 1) . '***@' . $d;
         }
-
-        // Central log ingest
-        if (defined('LOG_INGEST_TOKEN') && LOG_INGEST_TOKEN) {
-            $payload = json_encode([
-                'source'          => defined('APP_SLUG') ? APP_SLUG : 'unknown',
-                'environment'     => IS_PROD ? 'production' : 'dev',
-                'level'           => 'warning',
-                'category'        => 'security',
-                'message'         => $title,
-                'event_timestamp' => gmdate('Y-m-d\TH:i:s\Z'),
-                'host'            => $_SERVER['HTTP_HOST'] ?? 'unknown',
-                'context'         => [
-                    'detail'  => $message,
-                    'ip'      => $ip,
-                    'ua'      => substr($_SERVER['HTTP_USER_AGENT'] ?? '', 0, 200),
-                ],
+        return substr($s, 0, 1) . '***';
+    }
+    function obs_security_event(string $source, string $title, array $context = [], string $level = 'notice', string $ip = ''): void {
+        try {
+            $url = defined('OBS_URL') ? OBS_URL : getenv('OBS_URL');
+            $tok = defined('OBS_TOKEN') ? OBS_TOKEN : getenv('OBS_TOKEN');
+            if (!$url || !$tok) return;
+            if ($ip === '') $ip = $_SERVER['HTTP_CF_CONNECTING_IP'] ?? ($_SERVER['REMOTE_ADDR'] ?? '');
+            $context['net'] = obs_mask_ip($ip);
+            $context['ua']  = substr($_SERVER['HTTP_USER_AGENT'] ?? '', 0, 120);
+            $body = json_encode([
+                'source'      => $source,
+                'level'       => $level,
+                'category'    => 'security',
+                'message'     => $title,
+                'fingerprint' => "$source|security|$title",
+                'host'        => $_SERVER['HTTP_HOST'] ?? null,
+                'context'     => $context,
             ]);
-            @file_get_contents('https://www.space-monkey.org/log/api/ingest.php', false, stream_context_create([
-                'http' => [
-                    'method'        => 'POST',
-                    'header'        => "Content-Type: application/json\r\nX-Log-Token: " . LOG_INGEST_TOKEN,
-                    'content'       => $payload,
-                    'timeout'       => 3,
-                    'ignore_errors' => true,
-                ]
-            ]));
+            @file_get_contents(rtrim($url, '/') . '/event', false, stream_context_create(['http' => [
+                'method'        => 'POST',
+                'header'        => "Content-Type: application/json\r\nX-Obs-Token: $tok\r\nUser-Agent: $source-security/1",
+                'content'       => $body,
+                'timeout'       => 3,
+                'ignore_errors' => true,
+            ]]));
+        } catch (\Throwable $e) {
+            // alerting must never break the request
         }
     }
 }
