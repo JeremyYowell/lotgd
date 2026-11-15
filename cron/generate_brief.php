@@ -54,5 +54,6 @@ if ($ok) {
         ]));
         echo "[" . date('Y-m-d H:i:s') . "] ntfy alert sent.\n";
     }
+    obsCronFail('Daily brief failed: ' . $detail);
     exit(1);
 }

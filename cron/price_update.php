@@ -33,6 +33,7 @@ $startTime = microtime(true);
 
 if (!$apiKey || $apiKey === 'YOUR_KEY_HERE') {
     cronLog('ERROR', 'Finnhub API key not configured in settings table.');
+    obsCronFail('Finnhub API key not configured in settings table.');
     exit(1);
 }
 

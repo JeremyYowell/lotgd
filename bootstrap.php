@@ -155,3 +155,35 @@ function appLog(string $level, string $message, array $context = []): void {
     );
     file_put_contents($logDir . '/app.log', $line, FILE_APPEND | LOCK_EX);
 }
+
+// ── Cron heartbeats → obs (n8n workflow 20; Digital/AI-Agents/OBSERVABILITY_PLAN.md) ──
+// Scripts that define CRON_RUNNING check in to obs/hb when they exit. A fatal error, or a
+// call to obsCronFail() before exit(1), marks the run failed; n8n alerts on state changes
+// and when a job goes quiet for 1.5x its interval. Needs OBS_URL + OBS_TOKEN in config.php.
+// DreamHost's panel owns these crontab lines, so the heartbeat lives here, not in a wrapper.
+$GLOBALS['OBS_CRON_FAIL'] = null;
+function obsCronFail(string $why): void { $GLOBALS['OBS_CRON_FAIL'] = $why; }
+if (defined('CRON_RUNNING') && PHP_SAPI === 'cli' && defined('OBS_URL') && defined('OBS_TOKEN') && OBS_TOKEN) {
+    register_shutdown_function(function () {
+        // minutes between expected check-ins (price_update skips weekends, hence ~33h)
+        $intervals = ['price_update' => 2000, 'generate_brief' => 1440, 'sp500_update' => 44640];
+        $name  = basename($_SERVER['argv'][0] ?? 'unknown', '.php');
+        $err   = error_get_last();
+        $fatal = $err && in_array($err['type'], [E_ERROR, E_PARSE, E_CORE_ERROR, E_COMPILE_ERROR, E_USER_ERROR], true);
+        $why   = $GLOBALS['OBS_CRON_FAIL']
+              ?? ($fatal ? substr($err['message'], 0, 300) . ' @ ' . basename($err['file']) . ':' . $err['line'] : null);
+        $body  = json_encode([
+            'job'              => 'lotgd:' . str_replace('_', '-', $name),
+            'status'           => $why ? 'fail' : 'ok',
+            'interval_minutes' => $intervals[$name] ?? 1440,
+            'detail'           => $why,
+        ]);
+        @file_get_contents(rtrim(OBS_URL, '/') . '/hb', false, stream_context_create(['http' => [
+            'method'        => 'POST',
+            'header'        => "Content-Type: application/json\r\nX-Obs-Token: " . OBS_TOKEN . "\r\nUser-Agent: lotgd-cron/1",
+            'content'       => $body,
+            'timeout'       => 8,
+            'ignore_errors' => true,
+        ]]));
+    });
+}
